@@ -1,11 +1,13 @@
 'use client'
 
 import { Home, FileText, User } from 'lucide-react'
+import { useAppStore } from '@/stores/app-store'
 
 interface NavTab {
   label: string
   icon: React.ElementType
   active: boolean
+  view: 'asn-home' | 'asn-form-fill' | 'asn-profile'
 }
 
 interface ASNMobileNavProps {
@@ -13,10 +15,12 @@ interface ASNMobileNavProps {
 }
 
 export default function ASNMobileNav({ activeTab = 'beranda' }: ASNMobileNavProps) {
+  const { setCurrentView } = useAppStore()
+
   const tabs: NavTab[] = [
-    { label: 'Beranda', icon: Home, active: activeTab === 'beranda' },
-    { label: 'Formulir', icon: FileText, active: activeTab === 'formulir' },
-    { label: 'Profil', icon: User, active: activeTab === 'profil' },
+    { label: 'Beranda', icon: Home, active: activeTab === 'beranda', view: 'asn-home' },
+    { label: 'Formulir', icon: FileText, active: activeTab === 'formulir', view: 'asn-home' },
+    { label: 'Profil', icon: User, active: activeTab === 'profil', view: 'asn-profile' },
   ]
 
   return (
@@ -36,6 +40,7 @@ export default function ASNMobileNav({ activeTab = 'beranda' }: ASNMobileNavProp
                   ? 'text-primary'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
+              onClick={() => setCurrentView(tab.view)}
               aria-current={tab.active ? 'page' : undefined}
               aria-label={tab.label}
             >

@@ -74,12 +74,12 @@ const ACTION_LABELS: Record<string, string> = {
 }
 
 function getActionBadgeClasses(action: string): string {
-  if (action === 'LOGIN') return 'bg-blue-100 text-blue-800 border-blue-200'
-  if (action.startsWith('CREATE_')) return 'bg-emerald-100 text-emerald-800 border-emerald-200'
-  if (action.startsWith('UPDATE_')) return 'bg-amber-100 text-amber-800 border-amber-200'
-  if (action.startsWith('DELETE_')) return 'bg-red-100 text-red-800 border-red-200'
-  if (action === 'SEED_DATABASE') return 'bg-violet-100 text-violet-800 border-violet-200'
-  return 'bg-gray-100 text-gray-800 border-gray-200'
+  if (action === 'LOGIN') return 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-800'
+  if (action.startsWith('CREATE_')) return 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-300 dark:border-emerald-800'
+  if (action.startsWith('UPDATE_')) return 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-800'
+  if (action.startsWith('DELETE_')) return 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-800'
+  if (action === 'SEED_DATABASE') return 'bg-violet-100 text-violet-800 border-violet-200 dark:bg-violet-900/40 dark:text-violet-300 dark:border-violet-800'
+  return 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-muted dark:text-muted-foreground dark:border-muted'
 }
 
 function formatTimeAgo(dateStr: string): string {

@@ -39,6 +39,7 @@ import {
   Search,
   Eye,
   CalendarDays,
+  Printer,
 } from 'lucide-react'
 import {
   Dialog,
@@ -408,6 +409,155 @@ export default function AdminReports() {
     setDetailDialogOpen(true)
   }
 
+  const handlePrintReport = () => {
+    if (!reportData || filteredResponses.length === 0) return
+
+    const formTitle = reportData.form.title
+    const now = new Date()
+    const dateRangeText = startDate && endDate
+      ? `${new Date(startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })} s/d ${new Date(endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`
+      : startDate
+      ? `Mulai ${new Date(startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`
+      : endDate
+      ? `Sampai ${new Date(endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`
+      : 'Semua Periode'
+
+    // Build table headers
+    const sortedFields = [...reportData.form.fields].sort((a, b) => a.order - b.order)
+
+    // Build table rows HTML
+    const tableHeaders = ['No', 'Nama', 'NIP', 'Bidang', ...sortedFields.map(f => f.label)].join('</th><th>')
+    const tableRows = filteredResponses.map((r, idx) => {
+      const cells = [
+        String(idx + 1),
+        r.user.name,
+        r.user.nip,
+        r.user.bidang || '-',
+        ...sortedFields.map(field => {
+          const fieldResp = r.fields.find(fr => fr.fieldId === field.id)
+          return fieldResp ? parseFieldValue(fieldResp.value, field.type) : '—'
+        }),
+      ]
+      return `<tr><td>${cells.join('</td><td>')}</td></tr>`
+    }).join('')
+
+    // Build rekap per bidang
+    const rekapHeaders = ['Bidang', 'Sudah Mengisi', 'Belum Mengisi', 'Total', 'Persentase'].join('</th><th>')
+    const rekapRows = rekapPerBidang.map(r =>
+      `<tr><td>${r.bidang}</td><td>${r.responded}</td><td>${r.unresponded}</td><td>${r.total}</td><td>${r.percentage}%</td></tr>`
+    ).join('')
+
+    const printHtml = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Laporan ${formTitle} - BKAD Kabupaten Seruyan</title>
+        <style>
+          @page { size: A4; margin: 15mm; }
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: 'Times New Roman', serif; font-size: 11pt; color: #000; line-height: 1.4; }
+          .header { text-align: center; border-bottom: 3px double #1e40af; padding-bottom: 12px; margin-bottom: 20px; }
+          .header h1 { font-size: 14pt; font-weight: bold; color: #1e40af; margin-bottom: 2px; }
+          .header h2 { font-size: 12pt; font-weight: bold; margin-bottom: 2px; }
+          .header p { font-size: 10pt; color: #555; }
+          .header .logo-text { font-size: 10pt; color: #666; margin-top: 4px; }
+          .report-info { margin-bottom: 20px; display: flex; justify-content: space-between; }
+          .report-info div { font-size: 10pt; }
+          .report-info .label { color: #666; }
+          .report-info .value { font-weight: bold; }
+          h3 { font-size: 12pt; color: #1e40af; margin: 20px 0 8px 0; border-bottom: 1px solid #1e40af; padding-bottom: 4px; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 9pt; }
+          th, td { border: 1px solid #999; padding: 5px 8px; text-align: left; vertical-align: top; }
+          th { background-color: #1e40af; color: white; font-weight: bold; font-size: 9pt; }
+          tr:nth-child(even) { background-color: #f5f5f5; }
+          .stats-box { display: flex; gap: 20px; margin-bottom: 16px; }
+          .stat-item { flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; text-align: center; }
+          .stat-item .number { font-size: 18pt; font-weight: bold; color: #1e40af; }
+          .stat-item .label { font-size: 9pt; color: #666; }
+          .footer { margin-top: 30px; padding-top: 10px; border-top: 1px solid #ccc; font-size: 8pt; color: #888; display: flex; justify-content: space-between; }
+          .page-break { page-break-before: always; }
+          @media print {
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            th { background-color: #1e40af !important; color: white !important; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <p class="logo-text">PEMERINTAH KABUPATEN SERUYAN</p>
+          <h2>BADAN KEUANGAN DAN ASET DAERAH</h2>
+          <h1>LAPORAN PENGISIAN FORMULIR</h1>
+          <p>Jl. Patin No. 1, Kuala Pembungan, Kab. Seruyan, Kalimantan Tengah</p>
+        </div>
+
+        <div class="report-info">
+          <div>
+            <span class="label">Judul Form:</span> <span class="value">${formTitle}</span><br/>
+            <span class="label">Periode:</span> <span class="value">${dateRangeText}</span>
+          </div>
+          <div style="text-align: right;">
+            <span class="label">Tanggal Cetak:</span> <span class="value">${now.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span><br/>
+            <span class="label">Dicetak oleh:</span> <span class="value">${session?.user?.name || 'Administrator'}</span>
+          </div>
+        </div>
+
+        <div class="stats-box">
+          <div class="stat-item">
+            <div class="number">${totalResponded}</div>
+            <div class="label">Total Responden</div>
+          </div>
+          <div class="stat-item">
+            <div class="number">${totalUnresponded}</div>
+            <div class="label">Belum Mengisi</div>
+          </div>
+          <div class="stat-item">
+            <div class="number">${completionRate}%</div>
+            <div class="label">Tingkat Pengisian</div>
+          </div>
+        </div>
+
+        <h3>Data Respons</h3>
+        <table>
+          <thead><tr><th>${tableHeaders}</th></tr></thead>
+          <tbody>${tableRows}</tbody>
+        </table>
+
+        <h3>Rekap Per Bidang</h3>
+        <table>
+          <thead><tr><th>${rekapHeaders}</th></tr></thead>
+          <tbody>${rekapRows}</tbody>
+        </table>
+
+        ${reportData.unrespondedASN.length > 0 ? `
+        <h3>ASN Belum Mengisi</h3>
+        <table>
+          <thead><tr><th>No</th><th>Nama</th><th>NIP</th><th>Bidang</th></tr></thead>
+          <tbody>
+            ${reportData.unrespondedASN.map((asn, idx) =>
+              `<tr><td>${idx + 1}</td><td>${asn.name}</td><td>${asn.nip}</td><td>${asn.bidang || '-'}</td></tr>`
+            ).join('')}
+          </tbody>
+        </table>
+        ` : ''}
+
+        <div class="footer">
+          <div>SIDATA BKAD - Sistem Informasi Data ASN</div>
+          <div>Dokumen ini digenerate otomatis oleh sistem</div>
+        </div>
+      </body>
+      </html>
+    `
+
+    const printWindow = window.open('', '_blank')
+    if (printWindow) {
+      printWindow.document.write(printHtml)
+      printWindow.document.close()
+      printWindow.onload = () => {
+        printWindow.print()
+      }
+    }
+  }
+
   // Loading state for initial form load
   if (loadingForms) {
     return (
@@ -423,8 +573,8 @@ export default function AdminReports() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-            <BarChart3 className="w-5 h-5 text-blue-600" />
+          <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
+            <BarChart3 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
           </div>
           <div>
             <h2 className="text-lg font-bold text-foreground">Laporan</h2>
@@ -434,6 +584,16 @@ export default function AdminReports() {
           </div>
         </div>
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={handlePrintReport}
+            disabled={!reportData || filteredResponses.length === 0}
+          >
+            <Printer className="w-4 h-4" />
+            Print Laporan
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -567,7 +727,7 @@ export default function AdminReports() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Card className="border-border/60">
               <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center shrink-0 dark:bg-blue-900/30">
                   <Users className="w-5 h-5 text-blue-600" />
                 </div>
                 <div>
@@ -578,7 +738,7 @@ export default function AdminReports() {
             </Card>
             <Card className="border-border/60">
               <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center shrink-0 dark:bg-red-900/30">
                   <UserX className="w-5 h-5 text-red-500" />
                 </div>
                 <div>
@@ -589,7 +749,7 @@ export default function AdminReports() {
             </Card>
             <Card className="border-border/60">
               <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0 dark:bg-emerald-900/30">
                   <TrendingUp className="w-5 h-5 text-emerald-600" />
                 </div>
                 <div>
@@ -686,7 +846,7 @@ export default function AdminReports() {
                             {r.user.bidang ? (
                               <Badge
                                 variant="outline"
-                                className="text-[11px] font-medium bg-sky-50 text-sky-700 border-sky-200"
+                                className="text-[11px] font-medium bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-900/40 dark:text-sky-300 dark:border-sky-800"
                               >
                                 {r.user.bidang}
                               </Badge>
@@ -776,7 +936,7 @@ export default function AdminReports() {
                         <TableCell>
                           <Badge
                             variant="outline"
-                            className="text-[11px] font-medium bg-sky-50 text-sky-700 border-sky-200"
+                            className="text-[11px] font-medium bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-900/40 dark:text-sky-300 dark:border-sky-800"
                           >
                             {item.bidang}
                           </Badge>
@@ -822,7 +982,7 @@ export default function AdminReports() {
                 <CardTitle className="text-sm font-semibold flex items-center gap-2">
                   <UserX className="w-4 h-4 text-red-500" />
                   ASN Belum Mengisi
-                  <Badge variant="outline" className="text-[10px] font-normal bg-red-50 text-red-600 border-red-200">
+                  <Badge variant="outline" className="text-[10px] font-normal bg-red-50 text-red-600 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-800">
                     {reportData.unrespondedASN.length} orang
                   </Badge>
                 </CardTitle>
@@ -836,7 +996,7 @@ export default function AdminReports() {
                         className="flex items-center justify-between p-2.5 rounded-lg border border-border/50 bg-muted/20"
                       >
                         <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
+                          <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0 dark:bg-muted">
                             <span className="text-xs font-semibold text-gray-500">
                               {asn.name.charAt(0).toUpperCase()}
                             </span>
@@ -852,14 +1012,14 @@ export default function AdminReports() {
                           {asn.bidang && (
                             <Badge
                               variant="outline"
-                              className="text-[10px] bg-sky-50 text-sky-700 border-sky-200"
+                              className="text-[10px] bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-900/40 dark:text-sky-300 dark:border-sky-800"
                             >
                               {asn.bidang}
                             </Badge>
                           )}
                           <Badge
                             variant="outline"
-                            className="text-[10px] bg-red-50 text-red-600 border-red-200"
+                            className="text-[10px] bg-red-50 text-red-600 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-800"
                           >
                             Belum mengisi
                           </Badge>
@@ -879,7 +1039,7 @@ export default function AdminReports() {
         <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center dark:bg-blue-900/30">
                 <FileText className="w-4 h-4 text-blue-600" />
               </div>
               Detail Respons

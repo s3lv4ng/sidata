@@ -4,6 +4,8 @@ export type AppView =
   | "login"
   | "asn-home"
   | "asn-form-fill"
+  | "asn-profile"
+  | "asn-help"
   | "admin-dashboard"
   | "admin-forms"
   | "admin-form-create"
@@ -14,7 +16,8 @@ export type AppView =
   | "admin-announcements"
   | "admin-settings"
   | "admin-users"
-  | "admin-activity-logs";
+  | "admin-activity-logs"
+  | "admin-help";
 
 interface AppState {
   currentView: AppView;

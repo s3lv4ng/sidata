@@ -2,6 +2,65 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
 
+// GET /api/asn/[id] - Get ASN user by ID
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params;
+    const user = await db.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        nip: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+        jabatan: true,
+        pangkat: true,
+        unitKerja: true,
+        bidang: true,
+        statusASN: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: "ASN tidak ditemukan" }, { status: 404 });
+    }
+
+    return NextResponse.json(user);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+// PATCH /api/asn/[id] - Self-service update (email, phone only)
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params;
+    const body = await request.json();
+    const { email, phone } = body;
+
+    const data: Record<string, unknown> = {};
+    if (email !== undefined) data.email = email;
+    if (phone !== undefined) data.phone = phone;
+
+    if (Object.keys(data).length === 0) {
+      return NextResponse.json({ error: "Tidak ada data untuk diperbarui" }, { status: 400 });
+    }
+
+    const user = await db.user.update({ where: { id }, data });
+
+    return NextResponse.json(user);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
 // PUT /api/asn/[id] - Update ASN user
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {

@@ -421,8 +421,8 @@ export default function AdminASN() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-            <Users className="w-5 h-5 text-blue-600" />
+          <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
+            <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
           </div>
           <div>
             <h2 className="text-lg font-bold text-foreground">Data ASN</h2>
@@ -525,7 +525,7 @@ export default function AdminASN() {
               </TableHeader>
               <TableBody>
                 {paginatedList.map((asn, index) => (
-                  <TableRow key={asn.id} className="group">
+                  <TableRow key={asn.id} className="group hover:bg-muted/50 transition-colors">
                     <TableCell className="text-center text-muted-foreground text-sm">
                       {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
                     </TableCell>
@@ -556,7 +556,7 @@ export default function AdminASN() {
                       {asn.bidang ? (
                         <Badge
                           variant="outline"
-                          className="text-[11px] font-medium bg-sky-50 text-sky-700 border-sky-200"
+                          className="text-[11px] font-medium bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-900/40 dark:text-sky-300 dark:border-sky-800"
                         >
                           {asn.bidang}
                         </Badge>
@@ -568,10 +568,10 @@ export default function AdminASN() {
                       <Badge
                         className={`text-[11px] font-medium ${
                           asn.statusASN === 'PNS'
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-300 dark:border-emerald-800'
                             : asn.statusASN === 'PPPK'
-                            ? 'bg-amber-50 text-amber-700 border-amber-200'
-                            : 'bg-gray-50 text-gray-600 border-gray-200'
+                            ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-800'
+                            : 'bg-gray-50 text-gray-600 border-gray-200 dark:bg-muted dark:text-muted-foreground dark:border-muted'
                         }`}
                         variant="outline"
                       >
@@ -601,7 +601,7 @@ export default function AdminASN() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
+                          className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/30"
                           onClick={() => {
                             setAsnToDelete(asn)
                             setDeleteDialogOpen(true)
@@ -672,8 +672,8 @@ export default function AdminASN() {
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-                <Users className="w-4 h-4 text-blue-600" />
+              <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
+                <Users className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               </div>
               {editMode ? 'Edit Data ASN' : 'Tambah ASN Baru'}
             </DialogTitle>
@@ -685,7 +685,7 @@ export default function AdminASN() {
           </DialogHeader>
 
           {formError && (
-            <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+            <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 dark:bg-red-950/30 dark:border-red-800">
               <p className="text-sm text-red-700">{formError}</p>
             </div>
           )}
@@ -875,8 +875,8 @@ export default function AdminASN() {
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
-                <Upload className="w-4 h-4 text-emerald-600" />
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center">
+                <Upload className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               </div>
               Import ASN dari Excel
             </DialogTitle>
@@ -933,12 +933,12 @@ export default function AdminASN() {
               <div className="space-y-3 rounded-lg border p-4">
                 <p className="text-sm font-semibold text-foreground">Hasil Import</p>
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-lg bg-emerald-50 p-3 text-center">
+                  <div className="rounded-lg bg-emerald-50 p-3 text-center dark:bg-emerald-900/30">
                     <CheckCircle2 className="w-5 h-5 text-emerald-600 mx-auto mb-1" />
                     <p className="text-xl font-bold text-emerald-700">{importResults.success}</p>
                     <p className="text-xs text-emerald-600">Berhasil</p>
                   </div>
-                  <div className="rounded-lg bg-red-50 p-3 text-center">
+                  <div className="rounded-lg bg-red-50 p-3 text-center dark:bg-red-900/30">
                     <XCircle className="w-5 h-5 text-red-500 mx-auto mb-1" />
                     <p className="text-xl font-bold text-red-700">{importResults.failed}</p>
                     <p className="text-xs text-red-600">Gagal</p>
@@ -1001,7 +1001,7 @@ export default function AdminASN() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center dark:bg-red-900/30">
                 <AlertTriangle className="w-5 h-5 text-red-600" />
               </div>
               <DialogTitle className="text-lg">Hapus ASN</DialogTitle>

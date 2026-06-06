@@ -299,8 +299,8 @@ export default function AdminAnnouncements() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
-            <Megaphone className="w-5 h-5 text-amber-600" />
+          <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center">
+            <Megaphone className="w-5 h-5 text-amber-600 dark:text-amber-400" />
           </div>
           <div>
             <h2 className="text-lg font-bold text-foreground">Pengumuman</h2>
@@ -354,13 +354,13 @@ export default function AdminAnnouncements() {
               <Card
                 key={announcement.id}
                 className={`border-border/60 transition-colors hover:border-border ${
-                  announcement.isPinned ? 'ring-1 ring-amber-200 bg-amber-50/30' : ''
+                  announcement.isPinned ? 'ring-1 ring-amber-200 bg-amber-50/30 dark:ring-amber-800 dark:bg-amber-950/20' : ''
                 } ${!announcement.isActive ? 'opacity-60' : ''}`}
               >
                 <CardContent className="p-4">
                   <div className="flex flex-col sm:flex-row sm:items-start gap-3">
                     {/* Icon */}
-                    <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
+                    <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center shrink-0 dark:bg-amber-900/30">
                       <Megaphone className="w-5 h-5 text-amber-600" />
                     </div>
 
@@ -371,7 +371,7 @@ export default function AdminAnnouncements() {
                           {announcement.title}
                         </h3>
                         {announcement.isPinned && (
-                          <Badge className="text-[10px] font-medium bg-amber-100 text-amber-700 border-amber-300 hover:bg-amber-100" variant="outline">
+                          <Badge className="text-[10px] font-medium bg-amber-100 text-amber-700 border-amber-300 hover:bg-amber-100 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-800" variant="outline">
                             <Pin className="w-3 h-3 mr-1" />
                             Disematkan
                           </Badge>
@@ -467,7 +467,7 @@ export default function AdminAnnouncements() {
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center dark:bg-amber-900/30">
                 <Megaphone className="w-4 h-4 text-amber-600" />
               </div>
               {dialogMode === 'create' ? 'Tambah Pengumuman' : 'Edit Pengumuman'}
@@ -559,7 +559,7 @@ export default function AdminAnnouncements() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center dark:bg-red-900/30">
                 <AlertTriangle className="w-5 h-5 text-red-600" />
               </div>
               <DialogTitle className="text-lg">Hapus Pengumuman</DialogTitle>

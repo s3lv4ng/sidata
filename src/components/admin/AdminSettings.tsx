@@ -206,8 +206,8 @@ export default function AdminSettings() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center">
-            <Settings className="w-5 h-5 text-teal-600" />
+          <div className="w-10 h-10 rounded-xl bg-teal-50 dark:bg-teal-900/30 flex items-center justify-center">
+            <Settings className="w-5 h-5 text-teal-600 dark:text-teal-400" />
           </div>
           <div>
             <h2 className="text-lg font-bold text-foreground">Pengaturan Sistem</h2>

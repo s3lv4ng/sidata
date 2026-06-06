@@ -9,6 +9,8 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Progress } from '@/components/ui/progress'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Users,
   FileText,
@@ -28,6 +30,8 @@ import {
   ChevronRight,
   Sparkles,
   ArrowRight,
+  CalendarDays,
+  Filter,
 } from 'lucide-react'
 import {
   BarChart,
@@ -147,7 +151,7 @@ function getActivityIcon(action: string) {
 function CustomTooltip({ active, payload, label }: any) {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-white rounded-lg shadow-lg border border-border px-3 py-2 text-xs">
+      <div className="bg-popover rounded-lg shadow-lg border border-border px-3 py-2 text-xs">
         <p className="font-semibold text-foreground mb-1">{label}</p>
         {payload.map((entry: any, index: number) => (
           <p key={index} style={{ color: entry.color }} className="font-medium">
@@ -201,6 +205,11 @@ export default function DashboardOverview() {
   const [loading, setLoading] = useState(true)
   const [currentTime, setCurrentTime] = useState(new Date())
 
+  // Date range filter
+  const [startDate, setStartDate] = useState<string>('')
+  const [endDate, setEndDate] = useState<string>('')
+  const [activePreset, setActivePreset] = useState<string>('semua')
+
   useEffect(() => {
     fetchStats()
   }, [])
@@ -211,10 +220,42 @@ export default function DashboardOverview() {
     return () => clearInterval(interval)
   }, [])
 
-  const fetchStats = async () => {
+  const applyPreset = (preset: string) => {
+    setActivePreset(preset)
+    const now = new Date()
+    let start = ''
+    let end = now.toISOString().split('T')[0]
+
+    switch (preset) {
+      case '7hari':
+        start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        break
+      case '30hari':
+        start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        break
+      case '90hari':
+        start = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        break
+      case 'semua':
+      default:
+        start = ''
+        end = ''
+        break
+    }
+
+    setStartDate(start)
+    setEndDate(end)
+    fetchStats(start, end)
+  }
+
+  const fetchStats = async (start?: string, end?: string) => {
     try {
       setLoading(true)
-      const res = await fetch('/api/stats')
+      const params = new URLSearchParams()
+      if (start || startDate) params.set('startDate', start || startDate)
+      if (end || endDate) params.set('endDate', end || endDate)
+      const query = params.toString() ? `?${params.toString()}` : ''
+      const res = await fetch(`/api/stats${query}`)
       if (res.ok) {
         const data = await res.json()
         setStats(data)
@@ -224,6 +265,11 @@ export default function DashboardOverview() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleDateFilterApply = () => {
+    setActivePreset('custom')
+    fetchStats()
   }
 
   // Compute overall completion rate
@@ -341,6 +387,74 @@ export default function DashboardOverview() {
         </CardContent>
       </Card>
 
+      {/* ─── Date Range Filter ────────────────────────────────────────────── */}
+      <Card className="border-border/60">
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center">
+                <Filter className="w-4 h-4 text-violet-600" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">Filter Periode</p>
+                <p className="text-[11px] text-muted-foreground">Saring data berdasarkan waktu</p>
+              </div>
+            </div>
+            <div className="flex-1" />
+            {/* Quick filter buttons */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {[
+                { key: '7hari', label: '7 Hari' },
+                { key: '30hari', label: '30 Hari' },
+                { key: '90hari', label: '90 Hari' },
+                { key: 'semua', label: 'Semua' },
+              ].map((preset) => (
+                <Button
+                  key={preset.key}
+                  variant={activePreset === preset.key ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => applyPreset(preset.key)}
+                  className="text-xs h-7"
+                >
+                  {preset.label}
+                </Button>
+              ))}
+            </div>
+            {/* Custom date inputs */}
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <CalendarDays className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => { setStartDate(e.target.value); setActivePreset('custom') }}
+                  className="h-8 text-xs pl-8 w-[140px]"
+                  placeholder="Mulai"
+                />
+              </div>
+              <span className="text-xs text-muted-foreground">s/d</span>
+              <div className="relative">
+                <CalendarDays className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => { setEndDate(e.target.value); setActivePreset('custom') }}
+                  className="h-8 text-xs pl-8 w-[140px]"
+                  placeholder="Akhir"
+                />
+              </div>
+              <Button
+                size="sm"
+                onClick={handleDateFilterApply}
+                className="text-xs h-8 gap-1"
+              >
+                Terapkan
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* ─── Stat Cards ──────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
@@ -387,8 +501,8 @@ export default function DashboardOverview() {
         <Card className="border-border/60">
           <CardHeader className="pb-2">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-                <ShieldCheck className="w-4 h-4 text-blue-600" />
+              <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
+                <ShieldCheck className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
                 <CardTitle className="text-sm font-semibold">Distribusi Status ASN</CardTitle>
@@ -412,12 +526,12 @@ export default function DashboardOverview() {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-bold text-blue-700">{pnsCount}</span>
-                      <Badge variant="secondary" className="text-[10px] bg-blue-50 text-blue-700 border-blue-100">
+                      <Badge variant="secondary" className="text-[10px] bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-800">
                         {pnsPercentage}%
                       </Badge>
                     </div>
                   </div>
-                  <div className="h-3 bg-blue-50 rounded-full overflow-hidden">
+                  <div className="h-3 bg-blue-50 dark:bg-blue-900/30 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-gradient-to-r from-blue-400 to-blue-600 rounded-full transition-all duration-500"
                       style={{ width: `${pnsPercentage}%` }}
@@ -434,12 +548,12 @@ export default function DashboardOverview() {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-bold text-emerald-700">{pppkCount}</span>
-                      <Badge variant="secondary" className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-100">
+                      <Badge variant="secondary" className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-300 dark:border-emerald-800">
                         {pppkPercentage}%
                       </Badge>
                     </div>
                   </div>
-                  <div className="h-3 bg-emerald-50 rounded-full overflow-hidden">
+                  <div className="h-3 bg-emerald-50 dark:bg-emerald-900/30 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full transition-all duration-500"
                       style={{ width: `${pppkPercentage}%` }}
@@ -487,8 +601,8 @@ export default function DashboardOverview() {
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
-                  <CalendarClock className="w-4 h-4 text-amber-600" />
+                <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center">
+                  <CalendarClock className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                 </div>
                 <div>
                   <CardTitle className="text-sm font-semibold">Peringatan Deadline Form</CardTitle>
@@ -519,26 +633,26 @@ export default function DashboardOverview() {
                   {deadlineForms.map((form) => {
                     const urgencyColors = {
                       overdue: {
-                        bg: 'bg-red-50 border-red-200',
-                        badge: 'bg-red-100 text-red-800 border-red-200',
+                        bg: 'bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-800',
+                        badge: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-800',
                         bar: 'bg-red-500',
                         icon: 'text-red-500',
                       },
                       critical: {
-                        bg: 'bg-amber-50 border-amber-200',
-                        badge: 'bg-amber-100 text-amber-800 border-amber-200',
+                        bg: 'bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800',
+                        badge: 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-800',
                         bar: 'bg-amber-500',
                         icon: 'text-amber-500',
                       },
                       warning: {
-                        bg: 'bg-yellow-50 border-yellow-200',
-                        badge: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+                        bg: 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950/30 dark:border-yellow-800',
+                        badge: 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/40 dark:text-yellow-300 dark:border-yellow-800',
                         bar: 'bg-yellow-500',
                         icon: 'text-yellow-600',
                       },
                       safe: {
-                        bg: 'bg-green-50 border-green-200',
-                        badge: 'bg-green-100 text-green-800 border-green-200',
+                        bg: 'bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-800',
+                        badge: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-800',
                         bar: 'bg-green-500',
                         icon: 'text-green-500',
                       },
@@ -568,7 +682,7 @@ export default function DashboardOverview() {
                             {form.timeRemaining.text}
                           </Badge>
                         </div>
-                        <div className="mt-2 h-1.5 bg-white/50 rounded-full overflow-hidden">
+                        <div className="mt-2 h-1.5 bg-muted/50 rounded-full overflow-hidden">
                           <div
                             className={`h-full rounded-full transition-all duration-500 ${uc.bar}`}
                             style={{ width: `${Math.min(form.completionRate, 100)}%` }}
@@ -590,8 +704,8 @@ export default function DashboardOverview() {
         <Card className="lg:col-span-2 border-border/60">
           <CardHeader className="pb-2">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-                <BarChart3 className="w-4 h-4 text-blue-600" />
+              <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
+                <BarChart3 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
                 <CardTitle className="text-sm font-semibold">Tingkat Pengisian per Form</CardTitle>
@@ -638,8 +752,8 @@ export default function DashboardOverview() {
         <Card className="border-border/60">
           <CardHeader className="pb-2">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
-                <Users className="w-4 h-4 text-emerald-600" />
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center">
+                <Users className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               </div>
               <div>
                 <CardTitle className="text-sm font-semibold">ASN per Bidang</CardTitle>
@@ -702,8 +816,8 @@ export default function DashboardOverview() {
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center">
-                  <HandMetal className="w-4 h-4 text-red-600" />
+                <div className="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/30 flex items-center justify-center">
+                  <HandMetal className="w-4 h-4 text-red-600 dark:text-red-400" />
                 </div>
                 <div>
                   <CardTitle className="text-sm font-semibold">Belum Mengisi</CardTitle>
@@ -737,7 +851,7 @@ export default function DashboardOverview() {
                         </div>
                         <Badge
                           variant="outline"
-                          className="text-[10px] font-bold bg-red-50 text-red-700 border-red-200 shrink-0"
+                          className="text-[10px] font-bold bg-red-50 text-red-700 border-red-200 shrink-0 dark:bg-red-900/40 dark:text-red-300 dark:border-red-800"
                         >
                           {item.unrespondedCount} ASN
                         </Badge>
@@ -765,8 +879,8 @@ export default function DashboardOverview() {
         <Card className="lg:col-span-2 border-border/60">
           <CardHeader className="pb-2">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center">
-                <Activity className="w-4 h-4 text-violet-600" />
+              <div className="w-8 h-8 rounded-lg bg-violet-50 dark:bg-violet-900/30 flex items-center justify-center">
+                <Activity className="w-4 h-4 text-violet-600 dark:text-violet-400" />
               </div>
               <div>
                 <CardTitle className="text-sm font-semibold">Aktivitas Respon</CardTitle>
@@ -860,8 +974,8 @@ export default function DashboardOverview() {
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center">
-                  <Clock className="w-3.5 h-3.5 text-amber-600" />
+                <div className="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center">
+                  <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
                 </div>
                 <CardTitle className="text-sm font-semibold">Aktivitas Terkini</CardTitle>
               </div>
@@ -946,39 +1060,39 @@ function StatCard({
 }) {
   const colorMap = {
     blue: {
-      bg: 'bg-gradient-to-br from-blue-50 to-blue-100/50',
-      iconBg: 'bg-blue-100',
-      iconText: 'text-blue-600',
-      valueText: 'text-blue-700',
-      border: 'border-blue-100/60',
-      trendText: trendUp ? 'text-blue-600' : 'text-blue-500',
+      bg: 'bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/40 dark:to-blue-900/20',
+      iconBg: 'bg-blue-100 dark:bg-blue-900/40',
+      iconText: 'text-blue-600 dark:text-blue-400',
+      valueText: 'text-blue-700 dark:text-blue-300',
+      border: 'border-blue-100/60 dark:border-blue-800/40',
+      trendText: trendUp ? 'text-blue-600 dark:text-blue-400' : 'text-blue-500 dark:text-blue-500',
       gradientAccent: 'from-blue-500/10',
     },
     green: {
-      bg: 'bg-gradient-to-br from-emerald-50 to-emerald-100/50',
-      iconBg: 'bg-emerald-100',
-      iconText: 'text-emerald-600',
-      valueText: 'text-emerald-700',
-      border: 'border-emerald-100/60',
-      trendText: trendUp ? 'text-emerald-600' : 'text-emerald-500',
+      bg: 'bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-950/40 dark:to-emerald-900/20',
+      iconBg: 'bg-emerald-100 dark:bg-emerald-900/40',
+      iconText: 'text-emerald-600 dark:text-emerald-400',
+      valueText: 'text-emerald-700 dark:text-emerald-300',
+      border: 'border-emerald-100/60 dark:border-emerald-800/40',
+      trendText: trendUp ? 'text-emerald-600 dark:text-emerald-400' : 'text-emerald-500 dark:text-emerald-500',
       gradientAccent: 'from-emerald-500/10',
     },
     amber: {
-      bg: 'bg-gradient-to-br from-amber-50 to-amber-100/50',
-      iconBg: 'bg-amber-100',
-      iconText: 'text-amber-600',
-      valueText: 'text-amber-700',
-      border: 'border-amber-100/60',
-      trendText: trendUp ? 'text-amber-600' : 'text-amber-500',
+      bg: 'bg-gradient-to-br from-amber-50 to-amber-100/50 dark:from-amber-950/40 dark:to-amber-900/20',
+      iconBg: 'bg-amber-100 dark:bg-amber-900/40',
+      iconText: 'text-amber-600 dark:text-amber-400',
+      valueText: 'text-amber-700 dark:text-amber-300',
+      border: 'border-amber-100/60 dark:border-amber-800/40',
+      trendText: trendUp ? 'text-amber-600 dark:text-amber-400' : 'text-amber-500 dark:text-amber-500',
       gradientAccent: 'from-amber-500/10',
     },
     violet: {
-      bg: 'bg-gradient-to-br from-violet-50 to-violet-100/50',
-      iconBg: 'bg-violet-100',
-      iconText: 'text-violet-600',
-      valueText: 'text-violet-700',
-      border: 'border-violet-100/60',
-      trendText: trendUp ? 'text-violet-600' : 'text-violet-500',
+      bg: 'bg-gradient-to-br from-violet-50 to-violet-100/50 dark:from-violet-950/40 dark:to-violet-900/20',
+      iconBg: 'bg-violet-100 dark:bg-violet-900/40',
+      iconText: 'text-violet-600 dark:text-violet-400',
+      valueText: 'text-violet-700 dark:text-violet-300',
+      border: 'border-violet-100/60 dark:border-violet-800/40',
+      trendText: trendUp ? 'text-violet-600 dark:text-violet-400' : 'text-violet-500 dark:text-violet-500',
       gradientAccent: 'from-violet-500/10',
     },
   }
@@ -986,7 +1100,7 @@ function StatCard({
   const c = colorMap[color]
 
   return (
-    <Card className={`border ${c.border} ${c.bg} transition-shadow hover:shadow-md`}>
+    <Card className={`border ${c.border} ${c.bg} transition-all duration-200 hover:shadow-md backdrop-blur-sm`}>
       <CardContent className="p-4 sm:p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">

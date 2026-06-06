@@ -6,6 +6,7 @@ import { useAppStore, AppView } from '@/stores/app-store'
 import LoginForm from '@/components/auth/LoginForm'
 import ASNHomepage from '@/components/asn/ASNHomepage'
 import FormFiller from '@/components/asn/FormFiller'
+import ASNProfile from '@/components/asn/ASNProfile'
 import AdminLayout from '@/components/admin/AdminLayout'
 import DashboardOverview from '@/components/admin/DashboardOverview'
 import AdminForms from '@/components/admin/AdminForms'
@@ -17,6 +18,7 @@ import AdminAnnouncements from '@/components/admin/AdminAnnouncements'
 import AdminSettings from '@/components/admin/AdminSettings'
 import AdminUsers from '@/components/admin/AdminUsers'
 import AdminActivityLogs from '@/components/admin/AdminActivityLogs'
+import HelpFAQ from '@/components/shared/HelpFAQ'
 
 function AppContent() {
   const { data: session, status } = useSession()
@@ -62,6 +64,10 @@ function ASNViews({ currentView }: { currentView: AppView }) {
   switch (currentView) {
     case 'asn-form-fill':
       return <FormFiller />
+    case 'asn-profile':
+      return <ASNProfile />
+    case 'asn-help':
+      return <HelpFAQ userRole="ASN" />
     case 'asn-home':
     default:
       return <ASNHomepage />
@@ -92,6 +98,8 @@ function AdminViews({ currentView }: { currentView: AppView }) {
         return <AdminUsers />
       case 'admin-activity-logs':
         return <AdminActivityLogs />
+      case 'admin-help':
+        return <HelpFAQ userRole="ADMIN" />
       default:
         return <DashboardOverview />
     }

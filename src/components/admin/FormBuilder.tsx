@@ -28,6 +28,13 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog'
+import {
   ArrowLeft,
   Plus,
   Trash2,
@@ -49,6 +56,12 @@ import {
   GripIcon,
   ShortText,
   X,
+  LayoutTemplate,
+  User,
+  GraduationCap,
+  TrendingUp as TrendingUpIcon,
+  Building2,
+  ClipboardCheck,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { id as idLocale } from 'date-fns/locale'
@@ -109,6 +122,96 @@ const FIELD_TYPES: Array<{ value: FieldType; label: string; icon: React.ElementT
 
 const CHOICE_TYPES: FieldType[] = ['multiple_choice', 'checkbox', 'dropdown']
 
+// ─── Form Templates ────────────────────────────────────────────────────────
+
+interface FormTemplate {
+  id: string
+  name: string
+  description: string
+  icon: React.ElementType
+  fields: Array<{
+    label: string
+    type: FieldType
+    required: boolean
+    options?: string[]
+  }>
+}
+
+const FORM_TEMPLATES: FormTemplate[] = [
+  {
+    id: 'data-pribadi',
+    name: 'Data Pribadi ASN',
+    description: 'Formulir pengumpulan data pribadi Aparatur Sipil Negara',
+    icon: User,
+    fields: [
+      { label: 'Nama Lengkap', type: 'short_text', required: true },
+      { label: 'Tempat Lahir', type: 'short_text', required: true },
+      { label: 'Tanggal Lahir', type: 'date', required: true },
+      { label: 'Jenis Kelamin', type: 'multiple_choice', required: true, options: ['Laki-laki', 'Perempuan'] },
+      { label: 'Agama', type: 'dropdown', required: true, options: ['Islam', 'Kristen', 'Katolik', 'Hindu', 'Buddha', 'Konghucu'] },
+      { label: 'Status Pernikahan', type: 'dropdown', required: true, options: ['Belum Menikah', 'Menikah', 'Cerai Hidup', 'Cerai Mati'] },
+      { label: 'Alamat Lengkap', type: 'paragraph', required: true },
+      { label: 'No HP', type: 'short_text', required: true },
+      { label: 'Email', type: 'short_text', required: false },
+    ],
+  },
+  {
+    id: 'kebutuhan-pelatihan',
+    name: 'Kebutuhan Pelatihan',
+    description: 'Formulir identifikasi kebutuhan pelatihan dan pengembangan kompetensi',
+    icon: GraduationCap,
+    fields: [
+      { label: 'Nama Pelatihan yang Diinginkan', type: 'short_text', required: true },
+      { label: 'Jenis Pelatihan', type: 'dropdown', required: true, options: ['Teknis', 'Manajerial', 'Fungsional', 'Sosial Kultural'] },
+      { label: 'Prioritas', type: 'dropdown', required: true, options: ['Tinggi', 'Sedang', 'Rendah'] },
+      { label: 'Justifikasi / Alasan Kebutuhan Pelatihan', type: 'paragraph', required: true },
+      { label: 'Target Waktu Pelaksanaan', type: 'date', required: false },
+      { label: 'Penyelenggara yang Disarankan', type: 'short_text', required: false },
+    ],
+  },
+  {
+    id: 'laporan-kinerja',
+    name: 'Laporan Kinerja',
+    description: 'Formulir pelaporan capaian kinerja pegawai per periode',
+    icon: TrendingUpIcon,
+    fields: [
+      { label: 'Periode Pelaporan', type: 'dropdown', required: true, options: ['Triwulan I', 'Triwulan II', 'Triwulan III', 'Triwulan IV', 'Semester I', 'Semester II', 'Tahunan'] },
+      { label: 'Capaian Kinerja', type: 'paragraph', required: true },
+      { label: 'Kendala yang Dihadapi', type: 'paragraph', required: false },
+      { label: 'Rencana Tindak Lanjut', type: 'paragraph', required: true },
+      { label: 'Nilai Capaian (1-100)', type: 'number', required: true },
+      { label: 'Bukti Pendukung', type: 'file_upload', required: false },
+    ],
+  },
+  {
+    id: 'data-aset',
+    name: 'Data Aset',
+    description: 'Formulir pelaporan dan pendataan aset milik daerah',
+    icon: Building2,
+    fields: [
+      { label: 'Jenis Aset', type: 'dropdown', required: true, options: ['Tanah', 'Bangunan', 'Kendaraan', 'Peralatan', 'Furnitur', 'Elektronik', 'Lainnya'] },
+      { label: 'Nama / Uraian Aset', type: 'short_text', required: true },
+      { label: 'Nilai Aset (Rp)', type: 'number', required: true },
+      { label: 'Tahun Perolehan', type: 'date', required: true },
+      { label: 'Kondisi', type: 'dropdown', required: true, options: ['Baik', 'Cukup Baik', 'Kurang Baik', 'Rusak Berat'] },
+      { label: 'Keterangan Tambahan', type: 'paragraph', required: false },
+    ],
+  },
+  {
+    id: 'absensi-rapat',
+    name: 'Absensi Rapat',
+    description: 'Formulir kehadiran dan pencatatan rapat',
+    icon: ClipboardCheck,
+    fields: [
+      { label: 'Topik Rapat', type: 'short_text', required: true },
+      { label: 'Tanggal Rapat', type: 'date', required: true },
+      { label: 'Kehadiran', type: 'multiple_choice', required: true, options: ['Hadir', 'Tidak Hadir', 'Izin', 'Sakit'] },
+      { label: 'Catatan / Kesimpulan Rapat', type: 'paragraph', required: false },
+      { label: 'Lampiran Notulensi', type: 'file_upload', required: false },
+    ],
+  },
+]
+
 function getFieldTypeInfo(type: FieldType) {
   return FIELD_TYPES.find((ft) => ft.value === type) || FIELD_TYPES[0]
 }
@@ -140,6 +243,7 @@ export default function FormBuilder() {
   const [loadingForm, setLoadingForm] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
   const [calendarOpen, setCalendarOpen] = useState(false)
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false)
 
   const userId = (session?.user as any)?.id || ''
 
@@ -191,6 +295,21 @@ export default function FormBuilder() {
 
   const addField = () => {
     setFields([...fields, createEmptyField(fields.length)])
+  }
+
+  const applyTemplate = (template: FormTemplate) => {
+    setTitle(template.name)
+    setDescription(template.description)
+    setFields(
+      template.fields.map((f, idx) => ({
+        label: f.label,
+        type: f.type,
+        required: f.required,
+        options: f.options || [],
+        order: idx,
+      }))
+    )
+    setTemplateDialogOpen(false)
   }
 
   const removeField = (index: number) => {
@@ -333,6 +452,17 @@ export default function FormBuilder() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {!isEditing && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setTemplateDialogOpen(true)}
+                className="gap-2"
+              >
+                <LayoutTemplate className="w-4 h-4" />
+                <span className="hidden sm:inline">Gunakan Template</span>
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -359,7 +489,7 @@ export default function FormBuilder() {
         </div>
 
         <div className={`grid gap-6 ${showPreview ? 'lg:grid-cols-2' : 'lg:grid-cols-1'}`}>
-          {/* ─── Editor Column ────────────────────────────────────────── */}
+          {/* Editor Column */}
           <div className="space-y-4">
             {/* Form Details Card */}
             <Card className="border-border/60">
@@ -481,7 +611,7 @@ export default function FormBuilder() {
             </Card>
           </div>
 
-          {/* ─── Preview Column ───────────────────────────────────────── */}
+          {/* Preview Column */}
           {showPreview && (
             <div className="lg:sticky lg:top-20 lg:self-start">
               <Card className="border-border/60">
@@ -495,7 +625,6 @@ export default function FormBuilder() {
                 </CardHeader>
                 <CardContent>
                   <div className="border rounded-lg p-4 bg-white space-y-4">
-                    {/* Preview Title */}
                     <div>
                       <h3 className="text-base font-bold text-foreground">
                         {title || 'Judul Form'}
@@ -513,7 +642,6 @@ export default function FormBuilder() {
                       )}
                     </div>
                     <Separator />
-                    {/* Preview Fields */}
                     <div className="space-y-4">
                       {fields.map((field, idx) => (
                         <div key={idx} className="space-y-1.5">
@@ -532,6 +660,55 @@ export default function FormBuilder() {
           )}
         </div>
       </div>
+
+      {/* Template Selection Dialog */}
+      <Dialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen}>
+        <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <LayoutTemplate className="w-5 h-5 text-primary" />
+              Pilih Template Formulir
+            </DialogTitle>
+            <DialogDescription className="text-sm">
+              Template akan mengisi field secara otomatis. Anda tetap dapat menyesuaikan setelah memilih.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-2">
+            {FORM_TEMPLATES.map((template) => {
+              const TemplateIcon = template.icon
+              return (
+                <button
+                  key={template.id}
+                  className="text-left rounded-lg border border-border/60 p-4 hover:border-primary/40 hover:bg-primary/5 transition-all duration-200 group"
+                  onClick={() => applyTemplate(template)}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+                      <TemplateIcon className="w-5 h-5 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+                        {template.name}
+                      </h4>
+                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                        {template.description}
+                      </p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Badge variant="secondary" className="text-[10px]">
+                          {template.fields.length} field
+                        </Badge>
+                        <Badge variant="outline" className="text-[10px]">
+                          {template.fields.filter(f => f.required).length} wajib
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
     </TooltipProvider>
   )
 }

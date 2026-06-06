@@ -111,13 +111,13 @@ export default function LoginForm() {
           transition={{ duration: 0.5, delay: 0.2 }}
         >
           <div className="rounded-xl p-[2px] bg-gradient-to-br from-primary/40 via-gov-green/30 to-primary/40">
-            <Card className="border-0 shadow-2xl shadow-primary/10 bg-white">
+            <Card className="border-0 shadow-2xl shadow-primary/10 bg-background">
               <CardHeader className="text-center pb-2">
                 {/* Logo */}
                 <div className="mx-auto mb-4 flex items-center justify-center">
                   <div className="relative">
                     <div className="absolute inset-0 bg-primary/10 rounded-full blur-xl scale-150" />
-                    <div className="relative bg-white rounded-full p-3 shadow-lg border border-primary/10">
+                    <div className="relative bg-background rounded-full p-3 shadow-lg border border-primary/10">
                       <img
                         src="/logo.svg"
                         alt="Logo BKAD Kabupaten Seruyan"

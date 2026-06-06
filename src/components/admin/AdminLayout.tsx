@@ -27,6 +27,7 @@ import {
   History,
   Moon,
   Sun,
+  HelpCircle,
 } from 'lucide-react'
 
 interface MenuItem {
@@ -45,6 +46,7 @@ const menuItems: MenuItem[] = [
   { label: 'Pengaturan Sistem', icon: Settings, view: 'admin-settings' },
   { label: 'Manajemen User', icon: UserCog, view: 'admin-users' },
   { label: 'Log Aktivitas', icon: History, view: 'admin-activity-logs' },
+  { label: 'Bantuan', icon: HelpCircle, view: 'admin-help' },
 ]
 
 function getViewLabel(view: AppView): string {
@@ -77,12 +79,12 @@ const ACTION_LABELS: Record<string, string> = {
 }
 
 function getActionBadgeClasses(action: string): string {
-  if (action === 'LOGIN') return 'bg-blue-100 text-blue-800 border-blue-200'
-  if (action.startsWith('CREATE_')) return 'bg-emerald-100 text-emerald-800 border-emerald-200'
-  if (action.startsWith('UPDATE_')) return 'bg-amber-100 text-amber-800 border-amber-200'
-  if (action.startsWith('DELETE_')) return 'bg-red-100 text-red-800 border-red-200'
-  if (action === 'SEED_DATABASE') return 'bg-violet-100 text-violet-800 border-violet-200'
-  return 'bg-gray-100 text-gray-800 border-gray-200'
+  if (action === 'LOGIN') return 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-800'
+  if (action.startsWith('CREATE_')) return 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-300 dark:border-emerald-800'
+  if (action.startsWith('UPDATE_')) return 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-800'
+  if (action.startsWith('DELETE_')) return 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-800'
+  if (action === 'SEED_DATABASE') return 'bg-violet-100 text-violet-800 border-violet-200 dark:bg-violet-900/40 dark:text-violet-300 dark:border-violet-800'
+  return 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-muted dark:text-muted-foreground dark:border-muted'
 }
 
 function formatTimeAgo(dateStr: string): string {
@@ -315,7 +317,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
-        <header className="sticky top-0 z-30 h-16 bg-white/80 backdrop-blur-md border-b border-border flex items-center px-4 sm:px-6 gap-4">
+        <header className="sticky top-0 z-30 h-16 bg-background/80 backdrop-blur-md border-b border-border flex items-center px-4 sm:px-6 gap-4">
           {/* Hamburger / toggle */}
           <Button
             variant="ghost"
@@ -368,7 +370,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <Button variant="ghost" size="icon" className="relative shrink-0 text-muted-foreground hover:text-foreground">
                   <Bell className="w-5 h-5" />
                   {hasUnread && (
-                    <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
+                    <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-background" />
                   )}
                 </Button>
               </PopoverTrigger>
@@ -437,7 +439,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </main>
 
         {/* Footer */}
-        <footer className="shrink-0 border-t bg-white/50 backdrop-blur-sm px-4 sm:px-6 py-3">
+        <footer className="shrink-0 border-t bg-background/50 backdrop-blur-sm px-4 sm:px-6 py-3">
           <p className="text-[11px] text-muted-foreground text-center">
             &copy; 2025 BKAD Kabupaten Seruyan &middot; Sistem Pengumpulan Data ASN
           </p>

@@ -293,8 +293,8 @@ export default function AdminForms() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
-              <FileText className="w-5 h-5 text-emerald-600" />
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center">
+              <FileText className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
             </div>
             <div>
               <h2 className="text-lg font-bold text-foreground">Manajemen Form</h2>
@@ -398,7 +398,7 @@ export default function AdminForms() {
                       const responseCount = form.responses?.length || 0
 
                       return (
-                        <TableRow key={form.id} className="group">
+                        <TableRow key={form.id} className="group hover:bg-muted/50 transition-colors">
                           <TableCell className="text-center text-muted-foreground text-sm">
                             {index + 1}
                           </TableCell>
@@ -504,7 +504,7 @@ export default function AdminForms() {
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8 text-sky-600 hover:text-sky-700 hover:bg-sky-50"
+                                    className="h-8 w-8 text-sky-600 hover:text-sky-700 hover:bg-sky-50 dark:text-sky-400 dark:hover:text-sky-300 dark:hover:bg-sky-900/30"
                                     onClick={() => handleDuplicate(form)}
                                     disabled={duplicatingId === form.id}
                                   >
@@ -663,7 +663,7 @@ export default function AdminForms() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-7 text-xs gap-1 flex-1 text-sky-600 border-sky-200 hover:bg-sky-50"
+                          className="h-7 text-xs gap-1 flex-1 text-sky-600 border-sky-200 hover:bg-sky-50 dark:text-sky-400 dark:border-sky-800 dark:hover:bg-sky-900/30"
                           onClick={() => handleDuplicate(form)}
                           disabled={duplicatingId === form.id}
                         >

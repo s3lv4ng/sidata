@@ -385,8 +385,8 @@ export default function AdminUsers() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-sky-50 flex items-center justify-center">
-            <UserCog className="w-5 h-5 text-sky-600" />
+          <div className="w-10 h-10 rounded-xl bg-sky-50 dark:bg-sky-900/30 flex items-center justify-center">
+            <UserCog className="w-5 h-5 text-sky-600 dark:text-sky-400" />
           </div>
           <div>
             <h2 className="text-lg font-bold text-foreground">Manajemen User</h2>
@@ -405,7 +405,7 @@ export default function AdminUsers() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Card className="border-border/60">
           <CardContent className="p-3 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-sky-50 flex items-center justify-center shrink-0">
+            <div className="w-9 h-9 rounded-lg bg-sky-50 flex items-center justify-center shrink-0 dark:bg-sky-900/30">
               <UserCog className="w-4 h-4 text-sky-600" />
             </div>
             <div>
@@ -416,7 +416,7 @@ export default function AdminUsers() {
         </Card>
         <Card className="border-border/60">
           <CardContent className="p-3 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-violet-50 flex items-center justify-center shrink-0">
+            <div className="w-9 h-9 rounded-lg bg-violet-50 flex items-center justify-center shrink-0 dark:bg-violet-900/30">
               <Shield className="w-4 h-4 text-violet-600" />
             </div>
             <div>
@@ -427,7 +427,7 @@ export default function AdminUsers() {
         </Card>
         <Card className="border-border/60">
           <CardContent className="p-3 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
+            <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0 dark:bg-emerald-900/30">
               <User className="w-4 h-4 text-emerald-600" />
             </div>
             <div>
@@ -438,7 +438,7 @@ export default function AdminUsers() {
         </Card>
         <Card className="border-border/60">
           <CardContent className="p-3 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
+            <div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center shrink-0 dark:bg-amber-900/30">
               <ToggleLeft className="w-4 h-4 text-amber-600" />
             </div>
             <div>
@@ -521,8 +521,8 @@ export default function AdminUsers() {
                           <div
                             className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-semibold shrink-0 ${
                               user.role === 'ADMIN'
-                                ? 'bg-violet-100 text-violet-700'
-                                : 'bg-sky-100 text-sky-700'
+                                ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300'
+                                : 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300'
                             }`}
                           >
                             {user.name.charAt(0).toUpperCase()}
@@ -541,8 +541,8 @@ export default function AdminUsers() {
                         <Badge
                           className={`text-[10px] font-medium ${
                             user.role === 'ADMIN'
-                              ? 'bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-50'
-                              : 'bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-50'
+                              ? 'bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-50 dark:bg-violet-900/40 dark:text-violet-300 dark:border-violet-800'
+                              : 'bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-50 dark:bg-sky-900/40 dark:text-sky-300 dark:border-sky-800'
                           }`}
                           variant="outline"
                         >
@@ -573,8 +573,8 @@ export default function AdminUsers() {
                         <Badge
                           className={`text-[10px] font-medium ${
                             user.isActive
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-50'
-                              : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-100'
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-50 dark:bg-emerald-900/40 dark:text-emerald-300 dark:border-emerald-800'
+                              : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-100 dark:bg-muted dark:text-muted-foreground dark:border-muted'
                           }`}
                           variant="outline"
                         >
@@ -691,7 +691,7 @@ export default function AdminUsers() {
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-sky-50 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-sky-50 flex items-center justify-center dark:bg-sky-900/30">
                 <UserCog className="w-4 h-4 text-sky-600" />
               </div>
               {dialogMode === 'create' ? 'Tambah User Baru' : 'Edit User'}
@@ -910,7 +910,7 @@ export default function AdminUsers() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center dark:bg-red-900/30">
                 <AlertTriangle className="w-5 h-5 text-red-600" />
               </div>
               <DialogTitle className="text-lg">Hapus User</DialogTitle>
@@ -955,7 +955,7 @@ export default function AdminUsers() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-full bg-sky-50 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-sky-50 flex items-center justify-center dark:bg-sky-900/30">
                 <KeyRound className="w-5 h-5 text-sky-600" />
               </div>
               <DialogTitle className="text-lg">Reset Password</DialogTitle>

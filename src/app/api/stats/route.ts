@@ -5,31 +5,71 @@ import { db } from "@/lib/db";
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
+
+    // Build date filter for responses and activity logs
+    const dateFilter: Record<string, Date> = {};
+    if (startDate) dateFilter.gte = new Date(startDate);
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      dateFilter.lte = end;
+    }
+    const hasDateFilter = startDate || endDate;
 
     const totalASN = await db.user.count({ where: { role: "ASN" } });
     const activeASN = await db.user.count({ where: { role: "ASN", isActive: true } });
     const totalForms = await db.form.count();
     const activeForms = await db.form.count({ where: { isActive: true, isClosed: false } });
     const closedForms = await db.form.count({ where: { isClosed: true } });
-    const totalResponses = await db.formResponse.count();
+
+    // Total responses - with optional date filter
+    const totalResponses = await db.formResponse.count(
+      hasDateFilter
+        ? { where: { submittedAt: dateFilter } }
+        : {}
+    );
 
     // Per-form statistics
     const forms = await db.form.findMany({
       include: {
         _count: { select: { responses: true } },
+        ...(hasDateFilter ? { responses: { select: { submittedAt: true } } } : {}),
       },
       orderBy: { createdAt: "desc" },
     });
 
-    const formStats = forms.map((form) => ({
-      id: form.id,
-      title: form.title,
-      isActive: form.isActive,
-      isClosed: form.isClosed,
-      deadline: form.deadline,
-      responseCount: form._count.responses,
-      totalASN,
-      completionRate: totalASN > 0 ? Math.round((form._count.responses / totalASN) * 100) : 0,
+    const formStats = await Promise.all(forms.map(async (form) => {
+      let responseCount: number;
+      if (hasDateFilter) {
+        // Use database query for accurate date-filtered count
+        const dateWhere: Record<string, unknown> = { formId: form.id };
+        const submittedAtFilter: Record<string, Date> = {};
+        if (startDate) submittedAtFilter.gte = new Date(startDate);
+        if (endDate) {
+          const end = new Date(endDate);
+          end.setHours(23, 59, 59, 999);
+          submittedAtFilter.lte = end;
+        }
+        if (Object.keys(submittedAtFilter).length > 0) {
+          dateWhere.submittedAt = submittedAtFilter;
+        }
+        responseCount = await db.formResponse.count({ where: dateWhere });
+      } else {
+        responseCount = form._count.responses;
+      }
+
+      return {
+        id: form.id,
+        title: form.title,
+        isActive: form.isActive,
+        isClosed: form.isClosed,
+        deadline: form.deadline,
+        responseCount,
+        totalASN,
+        completionRate: totalASN > 0 ? Math.round((responseCount / totalASN) * 100) : 0,
+      };
     }));
 
     // Per-bidang statistics
@@ -59,10 +99,11 @@ export async function GET(request: NextRequest) {
       statusStats.push({ status: s.statusASN, count });
     }
 
-    // Recent activity
+    // Recent activity - with optional date filter
     const recentActivity = await db.activityLog.findMany({
       take: 10,
       orderBy: { createdAt: "desc" },
+      where: hasDateFilter ? { createdAt: dateFilter } : {},
       include: { user: { select: { name: true, nip: true } } },
     });
 
@@ -99,6 +140,7 @@ export async function GET(request: NextRequest) {
       statusStats,
       recentActivity,
       unrespondedPerForm,
+      dateRange: hasDateFilter ? { startDate, endDate } : null,
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

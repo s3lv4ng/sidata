@@ -36,6 +36,7 @@ import {
   Moon,
   Sun,
   KeyRound,
+  HelpCircle,
 } from 'lucide-react'
 import jsPDF from 'jspdf'
 import ASNMobileNav from './ASNMobileNav'
@@ -422,7 +423,7 @@ export default function ASNHomepage() {
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-background to-gov-green/5">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-primary/10 shadow-sm">
+      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border shadow-sm">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="bg-primary/10 rounded-lg p-1.5">
@@ -458,6 +459,16 @@ export default function ASNHomepage() {
                 <Sun className={`w-4 h-4 absolute inset-0 transition-all duration-300 ${darkMode ? 'opacity-0 rotate-90 scale-0' : 'opacity-100 rotate-0 scale-100'}`} />
                 <Moon className={`w-4 h-4 absolute inset-0 transition-all duration-300 ${darkMode ? 'opacity-100 rotate-0 scale-100' : 'opacity-0 -rotate-90 scale-0'}`} />
               </span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setCurrentView('asn-help')}
+              className="shrink-0 text-muted-foreground hover:text-foreground h-8 w-8"
+              aria-label="Bantuan"
+              title="Bantuan & FAQ"
+            >
+              <HelpCircle className="w-4 h-4" />
             </Button>
             <Button
               variant="ghost"
@@ -497,7 +508,7 @@ export default function ASNHomepage() {
         </div>
 
         {/* Profile Summary Card */}
-        <Card className="border-primary/15 bg-gradient-to-r from-primary/5 via-white to-gov-green/5 shadow-sm">
+        <Card className="border-primary/15 bg-gradient-to-r from-primary/5 via-background to-gov-green/5 shadow-sm transition-all duration-200">
           <CardContent className="p-4 sm:p-6">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
               <Avatar className="w-14 h-14 sm:w-16 sm:h-16 border-2 border-primary/20 shadow-md">
@@ -552,17 +563,17 @@ export default function ASNHomepage() {
             </div>
             <Progress value={progressPercent} className="h-2.5" />
             <div className="grid grid-cols-3 gap-3 sm:gap-4 mt-4">
-              <div className="text-center p-2 rounded-lg bg-amber-50/80">
-                <p className="text-xl font-bold text-amber-700">{formCounts.belum}</p>
-                <p className="text-xs text-amber-600 font-medium">Belum Diisi</p>
+              <div className="text-center p-2 rounded-lg bg-amber-50/80 dark:bg-amber-950/30">
+                <p className="text-xl font-bold text-amber-700 dark:text-amber-400">{formCounts.belum}</p>
+                <p className="text-xs text-amber-600 dark:text-amber-500 font-medium">Belum Diisi</p>
               </div>
-              <div className="text-center p-2 rounded-lg bg-emerald-50/80">
-                <p className="text-xl font-bold text-emerald-700">{formCounts.sudah}</p>
-                <p className="text-xs text-emerald-600 font-medium">Sudah Diisi</p>
+              <div className="text-center p-2 rounded-lg bg-emerald-50/80 dark:bg-emerald-950/30">
+                <p className="text-xl font-bold text-emerald-700 dark:text-emerald-400">{formCounts.sudah}</p>
+                <p className="text-xs text-emerald-600 dark:text-emerald-500 font-medium">Sudah Diisi</p>
               </div>
-              <div className="text-center p-2 rounded-lg bg-gray-50/80">
-                <p className="text-xl font-bold text-gray-600">{formCounts.ditutup}</p>
-                <p className="text-xs text-gray-500 font-medium">Ditutup</p>
+              <div className="text-center p-2 rounded-lg bg-gray-50/80 dark:bg-muted/50">
+                <p className="text-xl font-bold text-gray-600 dark:text-muted-foreground">{formCounts.ditutup}</p>
+                <p className="text-xs text-gray-500 dark:text-muted-foreground/70 font-medium">Ditutup</p>
               </div>
             </div>
           </CardContent>
@@ -669,10 +680,10 @@ export default function ASNHomepage() {
                       key={form.id}
                       className={`border transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 cursor-default ${
                         status === 'ditutup'
-                          ? 'opacity-60 border-gray-200'
+                          ? 'opacity-60 border-muted dark:border-muted'
                           : status === 'belum'
-                          ? 'border-amber-200/50 hover:border-amber-300'
-                          : 'border-emerald-200/50 hover:border-emerald-300'
+                          ? 'border-amber-200/50 hover:border-amber-300 dark:border-amber-800/50 dark:hover:border-amber-700'
+                          : 'border-emerald-200/50 hover:border-emerald-300 dark:border-emerald-800/50 dark:hover:border-emerald-700'
                       }`}
                     >
                       <CardContent className="p-4">
@@ -710,7 +721,7 @@ export default function ASNHomepage() {
                                     </Badge>
                                   )}
                                   {deadlineCountdown && deadlineCountdown.urgent && status === 'belum' && (
-                                    <Badge className="text-[10px] px-1.5 py-0 ml-0.5 bg-red-100 text-red-700 border-red-200 hover:bg-red-100">
+                                    <Badge className="text-[10px] px-1.5 py-0 ml-0.5 bg-red-100 text-red-700 border-red-200 hover:bg-red-100 dark:bg-red-950/50 dark:text-red-400 dark:border-red-800">
                                       {deadlineCountdown.text}
                                     </Badge>
                                   )}
@@ -777,7 +788,7 @@ export default function ASNHomepage() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t bg-gradient-to-b from-white/50 to-primary/5 backdrop-blur-sm mt-auto">
+      <footer className="border-t bg-gradient-to-b from-background/50 to-primary/5 backdrop-blur-sm mt-auto">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             {/* Institution Info */}
