@@ -1,12 +1,14 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useSession, signOut } from 'next-auth/react'
 import { useAppStore, AppView } from '@/stores/app-store'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
+import { Badge } from '@/components/ui/badge'
 import {
   LayoutDashboard,
   FileText,
@@ -21,6 +23,8 @@ import {
   X,
   ChevronRight,
   Home,
+  Bell,
+  History,
 } from 'lucide-react'
 
 interface MenuItem {
@@ -38,11 +42,61 @@ const menuItems: MenuItem[] = [
   { label: 'Pengumuman', icon: Megaphone, view: 'admin-announcements' },
   { label: 'Pengaturan Sistem', icon: Settings, view: 'admin-settings' },
   { label: 'Manajemen User', icon: UserCog, view: 'admin-users' },
+  { label: 'Log Aktivitas', icon: History, view: 'admin-activity-logs' },
 ]
 
 function getViewLabel(view: AppView): string {
   const item = menuItems.find((m) => m.view === view)
   return item?.label || 'Dashboard'
+}
+
+interface RecentActivity {
+  id: string
+  action: string
+  details: string | null
+  createdAt: string
+  user: { name: string; nip: string; role: string }
+}
+
+const ACTION_LABELS: Record<string, string> = {
+  LOGIN: 'Login',
+  CREATE_FORM: 'Buat Form',
+  UPDATE_FORM: 'Ubah Form',
+  DELETE_FORM: 'Hapus Form',
+  SUBMIT_RESPONSE: 'Kirim Respon',
+  UPDATE_RESPONSE: 'Ubah Respon',
+  CREATE_ASN: 'Tambah ASN',
+  UPDATE_ASN: 'Ubah ASN',
+  DELETE_ASN: 'Hapus ASN',
+  CREATE_ANNOUNCEMENT: 'Buat Pengumuman',
+  UPDATE_ANNOUNCEMENT: 'Ubah Pengumuman',
+  DELETE_ANNOUNCEMENT: 'Hapus Pengumuman',
+  SEED_DATABASE: 'Seed Database',
+}
+
+function getActionBadgeClasses(action: string): string {
+  if (action === 'LOGIN') return 'bg-blue-100 text-blue-800 border-blue-200'
+  if (action.startsWith('CREATE_')) return 'bg-emerald-100 text-emerald-800 border-emerald-200'
+  if (action.startsWith('UPDATE_')) return 'bg-amber-100 text-amber-800 border-amber-200'
+  if (action.startsWith('DELETE_')) return 'bg-red-100 text-red-800 border-red-200'
+  if (action === 'SEED_DATABASE') return 'bg-violet-100 text-violet-800 border-violet-200'
+  return 'bg-gray-100 text-gray-800 border-gray-200'
+}
+
+function formatTimeAgo(dateStr: string): string {
+  const now = new Date()
+  const date = new Date(dateStr)
+  const diffMs = now.getTime() - date.getTime()
+  const diffSeconds = Math.floor(diffMs / 1000)
+  const diffMinutes = Math.floor(diffSeconds / 60)
+  const diffHours = Math.floor(diffMinutes / 60)
+  const diffDays = Math.floor(diffHours / 24)
+
+  if (diffSeconds < 60) return `${diffSeconds} detik lalu`
+  if (diffMinutes < 60) return `${diffMinutes} menit lalu`
+  if (diffHours < 24) return `${diffHours} jam lalu`
+  if (diffDays < 30) return `${diffDays} hari lalu`
+  return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -52,6 +106,36 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const userName = session?.user?.name || 'Administrator'
   const userRole = (session?.user as any)?.role || 'ADMIN'
   const userNip = (session?.user as any)?.nip || ''
+
+  // Notification bell state
+  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([])
+  const [hasUnread, setHasUnread] = useState(false)
+  const [bellOpen, setBellOpen] = useState(false)
+
+  const fetchRecentActivities = useCallback(async () => {
+    try {
+      const res = await fetch('/api/activity-logs?limit=5')
+      if (res.ok) {
+        const data = await res.json()
+        const activities: RecentActivity[] = data.logs || []
+        setRecentActivities(activities)
+        // Check for activities newer than 1 hour
+        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
+        setHasUnread(activities.some((a) => new Date(a.createdAt) > oneHourAgo))
+      }
+    } catch {
+      // Silently fail
+    }
+  }, [])
+
+  useEffect(() => {
+    const loadActivities = async () => {
+      await fetchRecentActivities()
+    }
+    loadActivities()
+    const interval = setInterval(() => { loadActivities() }, 60000) // Refresh every 60s
+    return () => clearInterval(interval)
+  }, [fetchRecentActivities])
 
   // Close sidebar on mobile when view changes
   useEffect(() => {
@@ -241,10 +325,74 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             ))}
           </nav>
 
-          {/* Page title (visible on larger screens) */}
-          <h2 className="ml-auto text-base font-bold text-foreground hidden md:block truncate">
-            {getViewLabel(currentView)}
-          </h2>
+          {/* Notification Bell */}
+          <div className="ml-auto flex items-center gap-3">
+            <Popover open={bellOpen} onOpenChange={setBellOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative shrink-0 text-muted-foreground hover:text-foreground">
+                  <Bell className="w-5 h-5" />
+                  {hasUnread && (
+                    <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-0" align="end">
+                <div className="px-4 py-3 border-b">
+                  <h3 className="font-semibold text-sm">Notifikasi Aktivitas</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">Aktivitas terbaru di sistem</p>
+                </div>
+                <ScrollArea className="max-h-[320px]">
+                  {recentActivities.length === 0 ? (
+                    <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+                      Tidak ada aktivitas terbaru
+                    </div>
+                  ) : (
+                    <div className="divide-y">
+                      {recentActivities.map((activity) => (
+                        <div key={activity.id} className="px-4 py-3 hover:bg-muted/50 transition-colors">
+                          <div className="flex items-start gap-2">
+                            <Badge
+                              className={`text-[10px] font-medium border shrink-0 mt-0.5 ${getActionBadgeClasses(activity.action)}`}
+                              variant="outline"
+                            >
+                              {ACTION_LABELS[activity.action] || activity.action}
+                            </Badge>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{activity.user?.name || '-'}</p>
+                              {activity.details && (
+                                <p className="text-xs text-muted-foreground truncate mt-0.5">{activity.details}</p>
+                              )}
+                            </div>
+                          </div>
+                          <p className="text-[10px] text-muted-foreground mt-1.5">
+                            {formatTimeAgo(activity.createdAt)}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </ScrollArea>
+                <div className="border-t p-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-center text-xs"
+                    onClick={() => {
+                      setBellOpen(false)
+                      setCurrentView('admin-activity-logs')
+                    }}
+                  >
+                    Lihat Semua
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            {/* Page title (visible on larger screens) */}
+            <h2 className="text-base font-bold text-foreground hidden md:block truncate">
+              {getViewLabel(currentView)}
+            </h2>
+          </div>
         </header>
 
         {/* Page content */}

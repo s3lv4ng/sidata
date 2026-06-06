@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Progress } from '@/components/ui/progress'
 import {
   LogOut,
   FileText,
@@ -20,7 +22,19 @@ import {
   CheckCircle2,
   XCircle,
   ClipboardList,
+  Download,
+  User,
+  Building2,
+  Award,
+  Briefcase,
+  MapPin,
+  Phone,
+  Mail,
+  Globe,
+  Timer,
+  ListChecks,
 } from 'lucide-react'
+import jsPDF from 'jspdf'
 
 interface Announcement {
   id: string
@@ -32,6 +46,15 @@ interface Announcement {
   createdBy: { id: string; name: string }
 }
 
+interface FormField {
+  id: string
+  label: string
+  type: string
+  required: boolean
+  options: string | null
+  order: number
+}
+
 interface FormItem {
   id: string
   title: string
@@ -40,6 +63,7 @@ interface FormItem {
   isClosed: boolean
   deadline: string | null
   createdAt: string
+  fields?: FormField[]
   responses: Array<{ id: string; submittedAt: string }>
   createdBy: { id: string; name: string; nip: string }
 }
@@ -100,6 +124,30 @@ function formatDateTime(dateStr: string) {
   })
 }
 
+function getDeadlineCountdown(deadline: string): { text: string; urgent: boolean } {
+  const now = Date.now()
+  const end = new Date(deadline).getTime()
+  const diff = end - now
+
+  if (diff <= 0) {
+    return { text: 'Sudah lewat', urgent: true }
+  }
+
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+
+  if (days > 7) {
+    return { text: `${days} hari lagi`, urgent: false }
+  } else if (days > 0) {
+    return { text: `${days} hari lagi`, urgent: true }
+  } else if (hours > 0) {
+    return { text: `${hours} jam lagi`, urgent: true }
+  } else {
+    return { text: `${minutes} menit lagi`, urgent: true }
+  }
+}
+
 export default function ASNHomepage() {
   const { data: session } = useSession()
   const { setCurrentView, setSelectedForm } = useAppStore()
@@ -108,6 +156,7 @@ export default function ASNHomepage() {
   const [forms, setForms] = useState<FormItem[]>([])
   const [loadingAnnouncements, setLoadingAnnouncements] = useState(true)
   const [loadingForms, setLoadingForms] = useState(true)
+  const [downloadingProof, setDownloadingProof] = useState<string | null>(null)
 
   const userId = (session?.user as any)?.id || ''
 
@@ -156,8 +205,182 @@ export default function ASNHomepage() {
     setCurrentView('login')
   }
 
+  const handleDownloadProof = async (form: FormItem) => {
+    try {
+      setDownloadingProof(form.id)
+      const res = await fetch(`/api/forms/${form.id}?userId=${userId}`)
+      if (!res.ok) throw new Error('Gagal mengambil data form')
+      const formData = await res.json()
+
+      const doc = new jsPDF()
+      const pageWidth = doc.internal.pageSize.getWidth()
+
+      // Header
+      doc.setFillColor(30, 64, 175)
+      doc.rect(0, 0, pageWidth, 35, 'F')
+      doc.setTextColor(255, 255, 255)
+      doc.setFontSize(14)
+      doc.setFont('helvetica', 'bold')
+      doc.text('BUKTI PENGISIAN FORM', pageWidth / 2, 15, { align: 'center' })
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'normal')
+      doc.text('Sistem Pengumpulan Data ASN - BKAD Kabupaten Seruyan', pageWidth / 2, 23, { align: 'center' })
+      doc.setFontSize(9)
+      doc.text(`No. Dokumen: BUKTI-${form.id.substring(0, 8).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`, pageWidth / 2, 30, { align: 'center' })
+
+      // Form title
+      doc.setTextColor(0, 0, 0)
+      doc.setFontSize(13)
+      doc.setFont('helvetica', 'bold')
+      doc.text(form.title, 14, 45)
+      if (form.description) {
+        doc.setFontSize(9)
+        doc.setFont('helvetica', 'italic')
+        doc.setTextColor(100, 100, 100)
+        doc.text(form.description, 14, 51, { maxWidth: pageWidth - 28 })
+      }
+
+      // User info section
+      const userInfoY = form.description ? 60 : 56
+      doc.setTextColor(0, 0, 0)
+      doc.setFontSize(11)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Informasi Pegawai', 14, userInfoY)
+      doc.setDrawColor(30, 64, 175)
+      doc.setLineWidth(0.5)
+      doc.line(14, userInfoY + 2, 80, userInfoY + 2)
+
+      const userInfo = [
+        ['Nama', session?.user?.name || '-'],
+        ['NIP', (session?.user as any)?.nip || '-'],
+        ['Jabatan', (session?.user as any)?.jabatan || '-'],
+        ['Bidang', (session?.user as any)?.bidang || '-'],
+        ['Pangkat', (session?.user as any)?.pangkat || '-'],
+      ]
+
+      doc.setFontSize(9)
+      let currentY = userInfoY + 8
+      userInfo.forEach(([label, value]) => {
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(80, 80, 80)
+        doc.text(`${label}:`, 18, currentY)
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(0, 0, 0)
+        doc.text(value, 50, currentY)
+        currentY += 6
+      })
+
+      // Submission info
+      currentY += 4
+      doc.setFontSize(11)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Informasi Pengisian', 14, currentY)
+      doc.setDrawColor(30, 64, 175)
+      doc.line(14, currentY + 2, 80, currentY + 2)
+      currentY += 8
+
+      doc.setFontSize(9)
+      if (formData.responses && formData.responses.length > 0) {
+        const resp = formData.responses[0]
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(80, 80, 80)
+        doc.text('Tanggal Pengisian:', 18, currentY)
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(0, 0, 0)
+        doc.text(formatDateTime(resp.submittedAt), 60, currentY)
+        currentY += 6
+      }
+
+      // Form fields summary
+      currentY += 4
+      doc.setFontSize(11)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Ringkasan Isian Form', 14, currentY)
+      doc.setDrawColor(30, 64, 175)
+      doc.line(14, currentY + 2, 80, currentY + 2)
+      currentY += 8
+
+      if (formData.responses && formData.responses.length > 0 && formData.responses[0].fields) {
+        const fields = formData.responses[0].fields
+        const formFields = formData.fields || []
+
+        doc.setFontSize(8)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(80, 80, 80)
+        doc.text('No.', 14, currentY)
+        doc.text('Pertanyaan', 24, currentY)
+        doc.text('Jawaban', 110, currentY)
+        doc.setDrawColor(200, 200, 200)
+        doc.line(14, currentY + 2, pageWidth - 14, currentY + 2)
+        currentY += 6
+
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(0, 0, 0)
+
+        fields.forEach((field: any, index: number) => {
+          if (currentY > 270) {
+            doc.addPage()
+            currentY = 20
+          }
+
+          const formField = formFields.find((f: any) => f.id === field.fieldId)
+          const label = formField?.label || `Pertanyaan ${index + 1}`
+          const value = field.value || '-'
+
+          doc.setTextColor(80, 80, 80)
+          doc.text(`${index + 1}.`, 14, currentY)
+          doc.text(label, 24, currentY, { maxWidth: 82 })
+          doc.setTextColor(0, 0, 0)
+
+          const lines = doc.splitTextToSize(value, 76)
+          lines.forEach((line: string, lineIdx: number) => {
+            if (currentY > 270) {
+              doc.addPage()
+              currentY = 20
+            }
+            doc.text(line, 110, currentY)
+            if (lineIdx < lines.length - 1) currentY += 4
+          })
+
+          currentY += 6
+        })
+      }
+
+      // Footer
+      const footerY = doc.internal.pageSize.getHeight() - 25
+      doc.setDrawColor(30, 64, 175)
+      doc.setLineWidth(0.3)
+      doc.line(14, footerY, pageWidth - 14, footerY)
+
+      doc.setFontSize(7)
+      doc.setFont('helvetica', 'italic')
+      doc.setTextColor(120, 120, 120)
+      doc.text('BKAD Kabupaten Seruyan - Dokumen ini digenerate otomatis', 14, footerY + 5)
+      doc.text(`Dicetak pada: ${new Date().toLocaleString('id-ID')}`, 14, footerY + 9)
+      doc.text('Badan Keuangan dan Aset Daerah Kabupaten Seruyan, Kalimantan Tengah', pageWidth - 14, footerY + 5, { align: 'right' })
+
+      doc.save(`Bukti_Pengisian_${form.title.replace(/\s+/g, '_')}.pdf`)
+    } catch (err) {
+      console.error('Failed to generate proof:', err)
+    } finally {
+      setDownloadingProof(null)
+    }
+  }
+
   const userName = session?.user?.name || 'ASN'
   const userNip = (session?.user as any)?.nip || ''
+  const userJabatan = (session?.user as any)?.jabatan || ''
+  const userBidang = (session?.user as any)?.bidang || ''
+  const userPangkat = (session?.user as any)?.pangkat || ''
+
+  // Get initials for avatar
+  const getInitials = (name: string) => {
+    const parts = name.trim().split(/\s+/)
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    }
+    return name.substring(0, 2).toUpperCase()
+  }
 
   // Group forms by status for counts
   const formCounts = {
@@ -165,6 +388,9 @@ export default function ASNHomepage() {
     sudah: forms.filter((f) => getFormStatus(f, userId) === 'sudah').length,
     ditutup: forms.filter((f) => getFormStatus(f, userId) === 'ditutup').length,
   }
+
+  const totalActiveForms = forms.filter((f) => getFormStatus(f, userId) !== 'ditutup').length
+  const progressPercent = totalActiveForms > 0 ? Math.round((formCounts.sudah / totalActiveForms) * 100) : 0
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-background to-gov-green/5">
@@ -220,36 +446,77 @@ export default function ASNHomepage() {
           </div>
         </div>
 
-        {/* Summary cards */}
-        <div className="grid grid-cols-3 gap-3 sm:gap-4">
-          <Card className="border-amber-200/50 bg-gradient-to-br from-amber-50/50 to-amber-100/30">
-            <CardContent className="p-3 sm:p-4 text-center">
-              <div className="w-8 h-8 mx-auto mb-2 rounded-full bg-amber-100 flex items-center justify-center">
-                <Clock className="w-4 h-4 text-amber-600" />
+        {/* Profile Summary Card */}
+        <Card className="border-primary/15 bg-gradient-to-r from-primary/5 via-white to-gov-green/5 shadow-sm">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <Avatar className="w-14 h-14 sm:w-16 sm:h-16 border-2 border-primary/20 shadow-md">
+                <AvatarFallback className="bg-primary text-primary-foreground text-lg sm:text-xl font-bold">
+                  {getInitials(userName)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0 space-y-1.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-base sm:text-lg font-bold text-foreground">{userName}</h3>
+                  {userBidang && (
+                    <Badge className="bg-primary/10 text-primary border-primary/20 hover:bg-primary/10 text-xs">
+                      <Building2 className="w-3 h-3 mr-1" />
+                      {userBidang}
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-sm text-muted-foreground">
+                  <span className="flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-primary/60" />
+                    NIP: {userNip}
+                  </span>
+                  {userJabatan && (
+                    <span className="flex items-center gap-1.5">
+                      <Briefcase className="w-3.5 h-3.5 text-primary/60" />
+                      {userJabatan}
+                    </span>
+                  )}
+                  {userPangkat && (
+                    <span className="flex items-center gap-1.5">
+                      <Award className="w-3.5 h-3.5 text-primary/60" />
+                      {userPangkat}
+                    </span>
+                  )}
+                </div>
               </div>
-              <p className="text-2xl font-bold text-amber-700">{formCounts.belum}</p>
-              <p className="text-xs text-amber-600 font-medium">Belum Diisi</p>
-            </CardContent>
-          </Card>
-          <Card className="border-emerald-200/50 bg-gradient-to-br from-emerald-50/50 to-emerald-100/30">
-            <CardContent className="p-3 sm:p-4 text-center">
-              <div className="w-8 h-8 mx-auto mb-2 rounded-full bg-emerald-100 flex items-center justify-center">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Summary cards with progress */}
+        <Card className="border-primary/10 shadow-sm">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <ListChecks className="w-4 h-4 text-primary" />
+                <span className="text-sm font-semibold text-foreground">
+                  {formCounts.sudah} dari {totalActiveForms} form sudah diisi
+                </span>
               </div>
-              <p className="text-2xl font-bold text-emerald-700">{formCounts.sudah}</p>
-              <p className="text-xs text-emerald-600 font-medium">Sudah Diisi</p>
-            </CardContent>
-          </Card>
-          <Card className="border-gray-200/50 bg-gradient-to-br from-gray-50/50 to-gray-100/30">
-            <CardContent className="p-3 sm:p-4 text-center">
-              <div className="w-8 h-8 mx-auto mb-2 rounded-full bg-gray-100 flex items-center justify-center">
-                <XCircle className="w-4 h-4 text-gray-500" />
+              <span className="text-sm font-bold text-primary">{progressPercent}%</span>
+            </div>
+            <Progress value={progressPercent} className="h-2.5" />
+            <div className="grid grid-cols-3 gap-3 sm:gap-4 mt-4">
+              <div className="text-center p-2 rounded-lg bg-amber-50/80">
+                <p className="text-xl font-bold text-amber-700">{formCounts.belum}</p>
+                <p className="text-xs text-amber-600 font-medium">Belum Diisi</p>
               </div>
-              <p className="text-2xl font-bold text-gray-600">{formCounts.ditutup}</p>
-              <p className="text-xs text-gray-500 font-medium">Ditutup</p>
-            </CardContent>
-          </Card>
-        </div>
+              <div className="text-center p-2 rounded-lg bg-emerald-50/80">
+                <p className="text-xl font-bold text-emerald-700">{formCounts.sudah}</p>
+                <p className="text-xs text-emerald-600 font-medium">Sudah Diisi</p>
+              </div>
+              <div className="text-center p-2 rounded-lg bg-gray-50/80">
+                <p className="text-xl font-bold text-gray-600">{formCounts.ditutup}</p>
+                <p className="text-xs text-gray-500 font-medium">Ditutup</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Announcements */}
         <Card className="border-primary/10">
@@ -344,18 +611,13 @@ export default function ASNHomepage() {
               <div className="space-y-3">
                 {forms.map((form) => {
                   const status = getFormStatus(form, userId)
-                  const isDeadlineSoon =
-                    form.deadline &&
-                    !form.isClosed &&
-                    status === 'belum' &&
-                    new Date(form.deadline).getTime() - Date.now() < 3 * 24 * 60 * 60 * 1000
-                  const isPastDeadline =
-                    form.deadline && new Date(form.deadline) < new Date()
+                  const fieldCount = form.fields?.length || 0
+                  const deadlineCountdown = form.deadline ? getDeadlineCountdown(form.deadline) : null
 
                   return (
                     <Card
                       key={form.id}
-                      className={`border transition-all hover:shadow-md ${
+                      className={`border transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 cursor-default ${
                         status === 'ditutup'
                           ? 'opacity-60 border-gray-200'
                           : status === 'belum'
@@ -378,20 +640,29 @@ export default function ASNHomepage() {
                               </p>
                             )}
                             <div className="flex items-center gap-3 mt-2 flex-wrap">
+                              {/* Field count */}
+                              {fieldCount > 0 && (
+                                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <ListChecks className="w-3 h-3" />
+                                  {fieldCount} pertanyaan
+                                </span>
+                              )}
+                              {/* Deadline with countdown */}
                               {form.deadline && (
-                                <span
-                                  className={`text-xs flex items-center gap-1 ${
-                                    isPastDeadline
-                                      ? 'text-gray-400'
-                                      : isDeadlineSoon
-                                      ? 'text-amber-600 font-medium'
-                                      : 'text-muted-foreground'
-                                  }`}
-                                >
-                                  <Clock className="w-3 h-3" />
-                                  Deadline: {formatDate(form.deadline)}
-                                  {isDeadlineSoon && !isPastDeadline && (
-                                    <span className="text-amber-600 font-semibold">(Segera!)</span>
+                                <span className="text-xs flex items-center gap-1">
+                                  <Timer className="w-3 h-3" />
+                                  <span className={deadlineCountdown?.urgent ? 'text-amber-600 font-medium' : 'text-muted-foreground'}>
+                                    {formatDate(form.deadline)}
+                                  </span>
+                                  {deadlineCountdown && !deadlineCountdown.urgent && (
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 ml-0.5 border-muted-foreground/30 text-muted-foreground">
+                                      {deadlineCountdown.text}
+                                    </Badge>
+                                  )}
+                                  {deadlineCountdown && deadlineCountdown.urgent && status === 'belum' && (
+                                    <Badge className="text-[10px] px-1.5 py-0 ml-0.5 bg-red-100 text-red-700 border-red-200 hover:bg-red-100">
+                                      {deadlineCountdown.text}
+                                    </Badge>
                                   )}
                                 </span>
                               )}
@@ -402,7 +673,7 @@ export default function ASNHomepage() {
                             </div>
                           </div>
 
-                          <div className="shrink-0 sm:ml-4">
+                          <div className="shrink-0 sm:ml-4 flex items-center gap-2">
                             {status === 'belum' ? (
                               <Button
                                 size="sm"
@@ -413,15 +684,31 @@ export default function ASNHomepage() {
                                 <ChevronRight className="w-3 h-3 ml-1" />
                               </Button>
                             ) : status === 'sudah' ? (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleFillForm(form)}
-                                className="w-full sm:w-auto border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-                              >
-                                Lihat / Ubah
-                                <ChevronRight className="w-3 h-3 ml-1" />
-                              </Button>
+                              <>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleFillForm(form)}
+                                  className="w-full sm:w-auto border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                                >
+                                  Lihat / Ubah
+                                  <ChevronRight className="w-3 h-3 ml-1" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleDownloadProof(form)}
+                                  disabled={downloadingProof === form.id}
+                                  className="w-full sm:w-auto border-primary/30 text-primary hover:bg-primary/5"
+                                >
+                                  {downloadingProof === form.id ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  ) : (
+                                    <Download className="w-3.5 h-3.5" />
+                                  )}
+                                  <span className="ml-1">Unduh Bukti</span>
+                                </Button>
+                              </>
                             ) : (
                               <Button variant="ghost" size="sm" disabled className="w-full sm:w-auto">
                                 Ditutup
@@ -440,11 +727,52 @@ export default function ASNHomepage() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t bg-white/50 backdrop-blur-sm mt-auto">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 text-center">
-          <p className="text-xs text-muted-foreground">
-            &copy; 2025 BKAD Kabupaten Seruyan &middot; Badan Keuangan dan Aset Daerah
-          </p>
+      <footer className="border-t bg-gradient-to-b from-white/50 to-primary/5 backdrop-blur-sm mt-auto">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            {/* Institution Info */}
+            <div className="space-y-2">
+              <h4 className="text-sm font-bold text-foreground">BKAD Kabupaten Seruyan</h4>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Badan Keuangan dan Aset Daerah Kabupaten Seruyan, Provinsi Kalimantan Tengah
+              </p>
+            </div>
+            {/* Address */}
+            <div className="space-y-2">
+              <h4 className="text-sm font-bold text-foreground">Alamat</h4>
+              <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0 text-primary/60" />
+                <span>Jl. Patin No. 1, Kuala Pembuang, Kab. Seruyan, Kalimantan Tengah 74211</span>
+              </div>
+            </div>
+            {/* Contact */}
+            <div className="space-y-2">
+              <h4 className="text-sm font-bold text-foreground">Kontak</h4>
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Phone className="w-3.5 h-3.5 shrink-0 text-primary/60" />
+                  <span>(0532) 621001</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Mail className="w-3.5 h-3.5 shrink-0 text-primary/60" />
+                  <span>bkad@seruyankab.go.id</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Globe className="w-3.5 h-3.5 shrink-0 text-primary/60" />
+                  <span>www.seruyankab.go.id</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <Separator className="my-4 bg-primary/10" />
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
+            <p className="text-xs text-muted-foreground">
+              &copy; {new Date().getFullYear()} BKAD Kabupaten Seruyan &middot; Badan Keuangan dan Aset Daerah
+            </p>
+            <p className="text-xs text-muted-foreground/60">
+              Sistem Informasi Data ASN (SIDATA) v1.0.0
+            </p>
+          </div>
         </div>
       </footer>
     </div>

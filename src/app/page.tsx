@@ -16,6 +16,7 @@ import AdminReports from '@/components/admin/AdminReports'
 import AdminAnnouncements from '@/components/admin/AdminAnnouncements'
 import AdminSettings from '@/components/admin/AdminSettings'
 import AdminUsers from '@/components/admin/AdminUsers'
+import AdminActivityLogs from '@/components/admin/AdminActivityLogs'
 
 function AppContent() {
   const { data: session, status } = useSession()
@@ -89,6 +90,8 @@ function AdminViews({ currentView }: { currentView: AppView }) {
         return <AdminSettings />
       case 'admin-users':
         return <AdminUsers />
+      case 'admin-activity-logs':
+        return <AdminActivityLogs />
       default:
         return <DashboardOverview />
     }
