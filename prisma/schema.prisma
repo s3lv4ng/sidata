@@ -1,0 +1,120 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(cuid())
+  nip         String   @unique
+  password    String
+  name        String
+  role        String   @default("ASN") // "ADMIN" or "ASN"
+  email       String?
+  phone       String?
+  jabatan     String?   // Position
+  pangkat     String?   // Rank/Grade
+  unitKerja   String?   // Work unit
+  bidang      String?   // Division
+  statusASN   String?   // ASN status (PNS, PPPK, etc.)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  forms          Form[]
+  responses      FormResponse[]
+  announcements  Announcement[]
+  activityLogs   ActivityLog[]
+}
+
+model Form {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  isActive    Boolean   @default(true)
+  isClosed    Boolean   @default(false)
+  deadline    DateTime?
+  createdById String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  createdBy User          @relation(fields: [createdById], references: [id])
+  fields    FormField[]
+  responses FormResponse[]
+}
+
+model FormField {
+  id        String   @id @default(cuid())
+  formId    String
+  label     String
+  type      String   // short_text, paragraph, number, date, multiple_choice, checkbox, file_upload, dropdown
+  required  Boolean  @default(false)
+  options   String?  // JSON string for choices (multiple_choice, checkbox, dropdown)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  form      Form            @relation(fields: [formId], references: [id], onDelete: Cascade)
+  responses FieldResponse[]
+}
+
+model FormResponse {
+  id          String   @id @default(cuid())
+  formId      String
+  userId      String
+  isSubmitted Boolean  @default(true)
+  submittedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  form   Form            @relation(fields: [formId], references: [id])
+  user   User            @relation(fields: [userId], references: [id])
+  fields FieldResponse[]
+
+  @@unique([formId, userId]) // One response per user per form
+}
+
+model FieldResponse {
+  id         String   @id @default(cuid())
+  responseId String
+  fieldId    String
+  value      String?  // The answer value
+  fileName   String?  // For file uploads - original filename
+  filePath   String?  // For file uploads - stored path
+  createdAt  DateTime @default(now())
+
+  response FormResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  field    FormField    @relation(fields: [fieldId], references: [id])
+}
+
+model Announcement {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  isPinned  Boolean  @default(false)
+  isActive  Boolean  @default(true)
+  createdById String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  createdBy User @relation(fields: [createdById], references: [id])
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String
+  details   String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model SystemSetting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String
+}

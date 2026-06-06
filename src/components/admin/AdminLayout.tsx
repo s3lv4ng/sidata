@@ -1,0 +1,264 @@
+'use client'
+
+import { useEffect } from 'react'
+import { useSession, signOut } from 'next-auth/react'
+import { useAppStore, AppView } from '@/stores/app-store'
+import { Button } from '@/components/ui/button'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Separator } from '@/components/ui/separator'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import {
+  LayoutDashboard,
+  FileText,
+  Users,
+  ClipboardList,
+  BarChart3,
+  Megaphone,
+  Settings,
+  UserCog,
+  LogOut,
+  Menu,
+  X,
+  ChevronRight,
+  Home,
+} from 'lucide-react'
+
+interface MenuItem {
+  label: string
+  icon: React.ElementType
+  view: AppView
+}
+
+const menuItems: MenuItem[] = [
+  { label: 'Dashboard', icon: LayoutDashboard, view: 'admin-dashboard' },
+  { label: 'Manajemen Form', icon: FileText, view: 'admin-forms' },
+  { label: 'Data ASN', icon: Users, view: 'admin-asn' },
+  { label: 'Hasil Pengisian', icon: ClipboardList, view: 'admin-responses' },
+  { label: 'Laporan', icon: BarChart3, view: 'admin-reports' },
+  { label: 'Pengumuman', icon: Megaphone, view: 'admin-announcements' },
+  { label: 'Pengaturan Sistem', icon: Settings, view: 'admin-settings' },
+  { label: 'Manajemen User', icon: UserCog, view: 'admin-users' },
+]
+
+function getViewLabel(view: AppView): string {
+  const item = menuItems.find((m) => m.view === view)
+  return item?.label || 'Dashboard'
+}
+
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const { data: session } = useSession()
+  const { currentView, setCurrentView, sidebarOpen, setSidebarOpen } = useAppStore()
+
+  const userName = session?.user?.name || 'Administrator'
+  const userRole = (session?.user as any)?.role || 'ADMIN'
+  const userNip = (session?.user as any)?.nip || ''
+
+  // Close sidebar on mobile when view changes
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1024) {
+        setSidebarOpen(false)
+      }
+    }
+    handleResize()
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [setSidebarOpen])
+
+  const handleMenuClick = (view: AppView) => {
+    setCurrentView(view)
+    if (window.innerWidth < 1024) {
+      setSidebarOpen(false)
+    }
+  }
+
+  const handleLogout = async () => {
+    await signOut({ redirect: false })
+    setCurrentView('login')
+  }
+
+  // Build breadcrumb
+  const breadcrumbItems = [
+    { label: 'Admin', view: 'admin-dashboard' as AppView },
+    { label: getViewLabel(currentView), view: currentView },
+  ]
+
+  return (
+    <div className="min-h-screen flex bg-background">
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside
+        className={`fixed lg:static inset-y-0 left-0 z-50 flex flex-col w-[272px] bg-[oklch(0.22_0.06_250)] text-white transition-transform duration-200 ease-in-out ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0 lg:w-[72px]'
+        }`}
+      >
+        {/* Sidebar header */}
+        <div className="flex items-center gap-3 px-4 h-16 shrink-0 border-b border-white/10">
+          <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
+            <img
+              src="/logo.svg"
+              alt="Logo BKAD"
+              className="w-7 h-7 object-contain brightness-0 invert"
+            />
+          </div>
+          <div
+            className={`overflow-hidden transition-all duration-200 ${
+              sidebarOpen ? 'w-auto opacity-100' : 'w-0 opacity-0 lg:w-0 lg:opacity-0'
+            }`}
+          >
+            <h1 className="text-base font-bold tracking-wide whitespace-nowrap">SIDATA BKAD</h1>
+            <p className="text-[10px] text-white/50 whitespace-nowrap">Kabupaten Seruyan</p>
+          </div>
+          {/* Mobile close button */}
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="ml-auto lg:hidden text-white/60 hover:text-white p-1"
+            aria-label="Tutup menu"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Navigation */}
+        <ScrollArea className="flex-1 py-3">
+          <nav className="px-3 space-y-1">
+            {menuItems.map((item) => {
+              const isActive = currentView === item.view
+              const Icon = item.icon
+
+              return (
+                <button
+                  key={item.view}
+                  onClick={() => handleMenuClick(item.view)}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 group relative ${
+                    isActive
+                      ? 'bg-[oklch(0.30_0.07_250)] text-white shadow-sm before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-[3px] before:h-5 before:bg-white before:rounded-r-full'
+                      : 'text-white/65 hover:bg-[oklch(0.27_0.065_250)] hover:text-white'
+                  }`}
+                  aria-current={isActive ? 'page' : undefined}
+                >
+                  <Icon
+                    className={`w-[18px] h-[18px] shrink-0 ${
+                      isActive ? 'text-white' : 'text-white/50 group-hover:text-white/80'
+                    }`}
+                  />
+                  <span
+                    className={`whitespace-nowrap transition-all duration-200 ${
+                      sidebarOpen
+                        ? 'opacity-100 w-auto'
+                        : 'opacity-0 w-0 overflow-hidden lg:opacity-0 lg:w-0'
+                    }`}
+                  >
+                    {item.label}
+                  </span>
+                  {isActive && sidebarOpen && (
+                    <ChevronRight className="w-3.5 h-3.5 ml-auto opacity-50" />
+                  )}
+                </button>
+              )
+            })}
+          </nav>
+        </ScrollArea>
+
+        {/* User info & Logout */}
+        <div className="shrink-0 border-t border-white/10 p-3">
+          <div className="flex items-center gap-3 px-2 py-2">
+            <Avatar className="w-9 h-9 shrink-0 border-2 border-white/20">
+              <AvatarFallback className="bg-white/10 text-white text-xs font-semibold">
+                {userName.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div
+              className={`flex-1 min-w-0 transition-all duration-200 ${
+                sidebarOpen ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden lg:opacity-0 lg:w-0'
+              }`}
+            >
+              <p className="text-sm font-medium text-white truncate">{userName}</p>
+              <p className="text-[10px] text-white/40 truncate">
+                {userRole === 'ADMIN' ? 'Administrator' : 'ASN'}{userNip ? ` · ${userNip}` : ''}
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleLogout}
+            className={`w-full text-white/60 hover:text-white hover:bg-white/10 mt-1 ${
+              sidebarOpen ? 'justify-start gap-2' : 'justify-center lg:justify-center'
+            }`}
+          >
+            <LogOut className="w-4 h-4 shrink-0" />
+            <span
+              className={`transition-all duration-200 ${
+                sidebarOpen ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden lg:opacity-0 lg:w-0'
+              }`}
+            >
+              Keluar
+            </span>
+          </Button>
+        </div>
+      </aside>
+
+      {/* Main content */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Top bar */}
+        <header className="sticky top-0 z-30 h-16 bg-white/80 backdrop-blur-md border-b border-border flex items-center px-4 sm:px-6 gap-4">
+          {/* Hamburger / toggle */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="shrink-0 text-muted-foreground hover:text-foreground"
+            aria-label={sidebarOpen ? 'Tutup sidebar' : 'Buka sidebar'}
+          >
+            <Menu className="w-5 h-5" />
+          </Button>
+
+          {/* Breadcrumb */}
+          <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm min-w-0">
+            <Home className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+            {breadcrumbItems.map((item, index) => (
+              <span key={index} className="flex items-center gap-1.5 min-w-0">
+                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50 shrink-0" />
+                <span
+                  className={`truncate ${
+                    index === breadcrumbItems.length - 1
+                      ? 'font-semibold text-foreground'
+                      : 'text-muted-foreground'
+                  }`}
+                >
+                  {item.label}
+                </span>
+              </span>
+            ))}
+          </nav>
+
+          {/* Page title (visible on larger screens) */}
+          <h2 className="ml-auto text-base font-bold text-foreground hidden md:block truncate">
+            {getViewLabel(currentView)}
+          </h2>
+        </header>
+
+        {/* Page content */}
+        <main className="flex-1 p-4 sm:p-6 overflow-auto">
+          {children}
+        </main>
+
+        {/* Footer */}
+        <footer className="shrink-0 border-t bg-white/50 backdrop-blur-sm px-4 sm:px-6 py-3">
+          <p className="text-[11px] text-muted-foreground text-center">
+            &copy; 2025 BKAD Kabupaten Seruyan &middot; Sistem Pengumpulan Data ASN
+          </p>
+        </footer>
+      </div>
+    </div>
+  )
+}
