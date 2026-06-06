@@ -33,8 +33,13 @@ import {
   Globe,
   Timer,
   ListChecks,
+  Moon,
+  Sun,
+  KeyRound,
 } from 'lucide-react'
 import jsPDF from 'jspdf'
+import ASNMobileNav from './ASNMobileNav'
+import ChangePasswordDialog from '@/components/shared/ChangePasswordDialog'
 
 interface Announcement {
   id: string
@@ -157,6 +162,28 @@ export default function ASNHomepage() {
   const [loadingAnnouncements, setLoadingAnnouncements] = useState(true)
   const [loadingForms, setLoadingForms] = useState(true)
   const [downloadingProof, setDownloadingProof] = useState<string | null>(null)
+
+  // Change password dialog
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false)
+
+  // Dark mode state
+  const [darkMode, setDarkMode] = useState(() => {
+    if (typeof window === 'undefined') return false
+    const saved = localStorage.getItem('theme')
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+    return saved === 'dark' || (!saved && prefersDark)
+  })
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', darkMode)
+  }, [darkMode])
+
+  const toggleDarkMode = () => {
+    const newMode = !darkMode
+    setDarkMode(newMode)
+    document.documentElement.classList.toggle('dark', newMode)
+    localStorage.setItem('theme', newMode ? 'dark' : 'light')
+  }
 
   const userId = (session?.user as any)?.id || ''
 
@@ -411,7 +438,7 @@ export default function ASNHomepage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <div className="text-right hidden sm:block">
               <p className="text-sm font-semibold text-foreground leading-tight">{userName}</p>
               <p className="text-xs text-muted-foreground">NIP: {userNip}</p>
@@ -419,6 +446,29 @@ export default function ASNHomepage() {
             <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm sm:hidden">
               {userName.charAt(0).toUpperCase()}
             </div>
+            {/* Dark mode toggle */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleDarkMode}
+              className="shrink-0 text-muted-foreground hover:text-foreground h-8 w-8"
+              aria-label={darkMode ? 'Beralih ke mode terang' : 'Beralih ke mode gelap'}
+            >
+              <span className="relative w-4 h-4">
+                <Sun className={`w-4 h-4 absolute inset-0 transition-all duration-300 ${darkMode ? 'opacity-0 rotate-90 scale-0' : 'opacity-100 rotate-0 scale-100'}`} />
+                <Moon className={`w-4 h-4 absolute inset-0 transition-all duration-300 ${darkMode ? 'opacity-100 rotate-0 scale-100' : 'opacity-0 -rotate-90 scale-0'}`} />
+              </span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setChangePasswordOpen(true)}
+              className="text-muted-foreground hover:text-primary"
+              title="Ubah Password"
+            >
+              <KeyRound className="w-4 h-4" />
+              <span className="hidden sm:inline ml-1">Ubah Password</span>
+            </Button>
             <Button
               variant="ghost"
               size="sm"
@@ -433,7 +483,7 @@ export default function ASNHomepage() {
       </header>
 
       {/* Main content */}
-      <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-6 space-y-6">
+      <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-6 pb-20 md:pb-6 space-y-6">
         {/* Welcome section */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
@@ -775,6 +825,16 @@ export default function ASNHomepage() {
           </div>
         </div>
       </footer>
+
+      {/* Change Password Dialog */}
+      <ChangePasswordDialog
+        open={changePasswordOpen}
+        onOpenChange={setChangePasswordOpen}
+        userId={userId}
+      />
+
+      {/* Mobile bottom navigation */}
+      <ASNMobileNav activeTab="beranda" />
     </div>
   )
 }

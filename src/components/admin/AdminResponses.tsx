@@ -58,7 +58,10 @@ import {
   Users,
   FileText,
   Paperclip,
+  BarChart3,
+  TrendingUp,
 } from 'lucide-react'
+import { AreaChart, Area, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts'
 import * as XLSX from 'xlsx'
 
 interface FormOption {
@@ -134,6 +137,20 @@ interface ASNItem {
 
 const ITEMS_PER_PAGE = 10
 const BIDANG_OPTIONS = ['Pendapatan', 'Belanja', 'Aset', 'Umum']
+
+function CircularProgress({ value, size = 80, strokeWidth = 6 }: { value: number; size?: number; strokeWidth?: number }) {
+  const radius = (size - strokeWidth) / 2
+  const circumference = radius * 2 * Math.PI
+  const offset = circumference - (value / 100) * circumference
+  return (
+    <svg width={size} height={size} className="transform -rotate-90">
+      <circle cx={size/2} cy={size/2} r={radius} stroke="oklch(0.92 0.01 220)" strokeWidth={strokeWidth} fill="none" />
+      <circle cx={size/2} cy={size/2} r={radius} stroke="oklch(0.45 0.14 250)" strokeWidth={strokeWidth} fill="none"
+        strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round"
+        className="transition-all duration-500" />
+    </svg>
+  )
+}
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('id-ID', {
@@ -528,6 +545,202 @@ export default function AdminResponses() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Response Summary Analytics */}
+          {!loading && formDetail && (
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+              {/* Completion Rate */}
+              <Card className="border-border/60">
+                <CardContent className="p-4 flex flex-col items-center justify-center">
+                  <div className="relative">
+                    <CircularProgress value={totalASN > 0 ? Math.round((totalResponded / totalASN) * 100) : 0} size={90} strokeWidth={7} />
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-lg font-bold text-foreground">
+                        {totalASN > 0 ? Math.round((totalResponded / totalASN) * 100) : 0}%
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-xs font-medium text-muted-foreground mt-2">Tingkat Penyelesaian</p>
+                  <p className="text-[11px] text-muted-foreground/60">{totalResponded} dari {totalASN} ASN</p>
+                </CardContent>
+              </Card>
+
+              {/* Per-Bidang Breakdown */}
+              <Card className="border-border/60">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <BarChart3 className="w-4 h-4 text-teal-600" />
+                    <p className="text-xs font-semibold text-foreground">Per Bidang</p>
+                  </div>
+                  <div className="space-y-2.5">
+                    {(() => {
+                      const bidangData = BIDANG_OPTIONS.map((bidang) => {
+                        const totalInBidang = allASN.filter((a) => a.bidang === bidang).length
+                        const respondedInBidang = allASN.filter(
+                          (a) => a.bidang === bidang && respondedUserIds.has(a.id)
+                        ).length
+                        const pct = totalInBidang > 0 ? Math.round((respondedInBidang / totalInBidang) * 100) : 0
+                        return { bidang, totalInBidang, respondedInBidang, pct }
+                      })
+                      return bidangData.map((bd) => (
+                        <div key={bd.bidang}>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[11px] font-medium text-foreground">{bd.bidang}</span>
+                            <span className="text-[11px] text-muted-foreground">
+                              {bd.respondedInBidang}/{bd.totalInBidang} ({bd.pct}%)
+                            </span>
+                          </div>
+                          <div className="h-2 rounded-full bg-muted overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all duration-500"
+                              style={{
+                                width: `${bd.pct}%`,
+                                backgroundColor:
+                                  bd.pct >= 75
+                                    ? 'oklch(0.6 0.15 160)'
+                                    : bd.pct >= 50
+                                    ? 'oklch(0.7 0.14 75)'
+                                    : bd.pct > 0
+                                    ? 'oklch(0.65 0.15 50)'
+                                    : 'oklch(0.85 0.01 220)',
+                              }}
+                            />
+                          </div>
+                        </div>
+                      ))
+                    })()}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Response Timeline */}
+              <Card className="border-border/60">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <TrendingUp className="w-4 h-4 text-teal-600" />
+                    <p className="text-xs font-semibold text-foreground">Timeline Respons</p>
+                  </div>
+                  {(() => {
+                    const timelineData = (() => {
+                      if (responses.length === 0) return []
+                      const dateMap = new Map<string, number>()
+                      responses.forEach((r) => {
+                        const dateKey = new Date(r.submittedAt).toLocaleDateString('id-ID', {
+                          day: '2-digit',
+                          month: 'short',
+                        })
+                        dateMap.set(dateKey, (dateMap.get(dateKey) || 0) + 1)
+                      })
+                      return Array.from(dateMap.entries()).map(([date, count]) => ({
+                        date,
+                        jumlah: count,
+                      }))
+                    })()
+                    if (timelineData.length === 0) {
+                      return (
+                        <div className="flex items-center justify-center h-[100px] text-xs text-muted-foreground">
+                          Belum ada respons
+                        </div>
+                      )
+                    }
+                    return (
+                      <ResponsiveContainer width="100%" height={100}>
+                        <AreaChart data={timelineData} margin={{ top: 2, right: 2, left: -20, bottom: 0 }}>
+                          <XAxis dataKey="date" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
+                          <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
+                          <RechartsTooltip
+                            contentStyle={{ fontSize: 11, borderRadius: 6, border: '1px solid oklch(0.88 0.01 220)' }}
+                            formatter={(value: number) => [`${value} respons`, 'Jumlah']}
+                          />
+                          <defs>
+                            <linearGradient id="timelineGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="oklch(0.55 0.15 170)" stopOpacity={0.3} />
+                              <stop offset="95%" stopColor="oklch(0.55 0.15 170)" stopOpacity={0.02} />
+                            </linearGradient>
+                          </defs>
+                          <Area
+                            type="monotone"
+                            dataKey="jumlah"
+                            stroke="oklch(0.45 0.14 170)"
+                            fill="url(#timelineGrad)"
+                            strokeWidth={2}
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    )
+                  })()}
+                </CardContent>
+              </Card>
+
+              {/* Field Completion Rate */}
+              <Card className="border-border/60">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <FileText className="w-4 h-4 text-teal-600" />
+                    <p className="text-xs font-semibold text-foreground">Kelengkapan Isian</p>
+                  </div>
+                  {(() => {
+                    const fieldData = formDetail.fields
+                      .sort((a, b) => a.order - b.order)
+                      .map((field) => {
+                        const filledCount = responses.filter((r) => {
+                          const fr = r.fields.find((f) => f.fieldId === field.id)
+                          return fr && fr.value && fr.value.trim() !== ''
+                        }).length
+                        const pct = responses.length > 0 ? Math.round((filledCount / responses.length) * 100) : 0
+                        return { label: field.label, filledCount, pct }
+                      })
+
+                    if (fieldData.length === 0) {
+                      return (
+                        <div className="flex items-center justify-center h-[100px] text-xs text-muted-foreground">
+                          Tidak ada field
+                        </div>
+                      )
+                    }
+
+                    const chartData = fieldData.map((fd) => ({
+                      name: fd.label.length > 14 ? fd.label.slice(0, 14) + '…' : fd.label,
+                      fullName: fd.label,
+                      pct: fd.pct,
+                      filled: fd.filledCount,
+                    }))
+
+                    const barColors = chartData.map((d) =>
+                      d.pct >= 80
+                        ? 'oklch(0.6 0.15 160)'
+                        : d.pct >= 50
+                        ? 'oklch(0.7 0.14 75)'
+                        : d.pct > 0
+                        ? 'oklch(0.65 0.15 50)'
+                        : 'oklch(0.85 0.01 220)'
+                    )
+
+                    return (
+                      <ResponsiveContainer width="100%" height={Math.max(100, chartData.length * 24)}>
+                        <BarChart data={chartData} layout="vertical" margin={{ top: 2, right: 10, left: 0, bottom: 2 }}>
+                          <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 9 }} tickFormatter={(v: number) => `${v}%`} />
+                          <YAxis type="category" dataKey="name" tick={{ fontSize: 9 }} width={60} />
+                          <RechartsTooltip
+                            contentStyle={{ fontSize: 11, borderRadius: 6, border: '1px solid oklch(0.88 0.01 220)' }}
+                            formatter={(value: number, _name: string, props: any) => [
+                              `${value}% (${props.payload.filled}/${responses.length})`,
+                              props.payload.fullName,
+                            ]}
+                          />
+                          <Bar dataKey="pct" radius={[0, 4, 4, 0]} barSize={14}>
+                            {chartData.map((_, index) => (
+                              <Cell key={`cell-${index}`} fill={barColors[index]} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    )
+                  })()}
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
           {/* Responses Table */}
           {loading ? (

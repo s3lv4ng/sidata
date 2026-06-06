@@ -54,8 +54,14 @@ import {
   AlertTriangle,
   ChevronLeft,
   ChevronRight,
+  KeyRound,
+  FileSpreadsheet,
+  CheckCircle2,
+  XCircle,
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
+import { toast } from 'sonner'
+import ChangePasswordDialog from '@/components/shared/ChangePasswordDialog'
 
 interface ASNItem {
   id: string
@@ -124,6 +130,20 @@ export default function AdminASN() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [asnToDelete, setAsnToDelete] = useState<ASNItem | null>(null)
   const [deleting, setDeleting] = useState(false)
+
+  // Import dialog
+  const [importDialogOpen, setImportDialogOpen] = useState(false)
+  const [importFile, setImportFile] = useState<File | null>(null)
+  const [importing, setImporting] = useState(false)
+  const [importResults, setImportResults] = useState<{
+    success: number
+    failed: number
+    errors: string[]
+  } | null>(null)
+
+  // Change password dialog
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false)
+  const [changePasswordUserId, setChangePasswordUserId] = useState<string>('')
 
   const adminId = (session?.user as any)?.id || ''
 
@@ -320,7 +340,71 @@ export default function AdminASN() {
   }
 
   const handleImportClick = () => {
-    addNotification('Fitur import Excel akan segera tersedia', 'info')
+    setImportFile(null)
+    setImportResults(null)
+    setImportDialogOpen(true)
+  }
+
+  const downloadTemplate = () => {
+    const headers = ['NIP', 'Nama Lengkap', 'Jabatan', 'Pangkat', 'Unit Kerja', 'Bidang', 'Status ASN', 'Email', 'No HP']
+    const example = ['199001012010011001', 'Nama Contoh', 'Jabatan Contoh', 'III/a', 'BKAD Kabupaten Seruyan', 'Pendapatan', 'PNS', 'email@example.com', '081234567890']
+    const ws = XLSX.utils.aoa_to_sheet([headers, example])
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, "Template ASN")
+    const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" })
+    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = "template-asn-bkad.xlsx"
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success('Template berhasil diunduh')
+  }
+
+  const handleImport = async () => {
+    if (!importFile) {
+      toast.error('Pilih file Excel terlebih dahulu')
+      return
+    }
+
+    try {
+      setImporting(true)
+      setImportResults(null)
+
+      const formData = new FormData()
+      formData.append('file', importFile)
+      if (adminId) formData.append('adminId', adminId)
+
+      const res = await fetch('/api/asn/import', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Gagal mengimport data')
+      }
+
+      setImportResults(data)
+      if (data.success > 0) {
+        toast.success(`${data.success} ASN berhasil diimport`)
+        await fetchASN()
+      }
+      if (data.failed > 0 && data.success === 0) {
+        toast.error('Semua data gagal diimport')
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal mengimport data')
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  const handleChangePassword = (asn: ASNItem) => {
+    setChangePasswordUserId(asn.id)
+    setChangePasswordOpen(true)
   }
 
   if (loading) {
@@ -504,6 +588,15 @@ export default function AdminASN() {
                           title="Edit ASN"
                         >
                           <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-primary/60 hover:text-primary hover:bg-primary/5"
+                          onClick={() => handleChangePassword(asn)}
+                          title="Ubah Password"
+                        >
+                          <KeyRound className="w-3.5 h-3.5" />
                         </Button>
                         <Button
                           variant="ghost"
@@ -776,6 +869,132 @@ export default function AdminASN() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Import from Excel Dialog */}
+      <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+                <Upload className="w-4 h-4 text-emerald-600" />
+              </div>
+              Import ASN dari Excel
+            </DialogTitle>
+            <DialogDescription className="text-sm">
+              Upload file Excel (.xlsx, .xls) untuk menambahkan data ASN secara bulk. Password default: asn123
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {/* Download Template */}
+            <div className="rounded-lg border border-dashed border-primary/30 bg-primary/5 p-4">
+              <div className="flex items-start gap-3">
+                <FileSpreadsheet className="w-8 h-8 text-primary/60 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground">Download Template</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Unduh template Excel terlebih dahulu, isi data ASN, lalu upload kembali.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-2 gap-2"
+                    onClick={downloadTemplate}
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    Download Template
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* File Upload */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Pilih File Excel</Label>
+              <Input
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] || null
+                  setImportFile(file)
+                  setImportResults(null)
+                }}
+                className="cursor-pointer"
+              />
+              {importFile && (
+                <p className="text-xs text-muted-foreground">
+                  File: <span className="font-medium text-foreground">{importFile.name}</span> ({(importFile.size / 1024).toFixed(1)} KB)
+                </p>
+              )}
+            </div>
+
+            {/* Import Results */}
+            {importResults && (
+              <div className="space-y-3 rounded-lg border p-4">
+                <p className="text-sm font-semibold text-foreground">Hasil Import</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-lg bg-emerald-50 p-3 text-center">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600 mx-auto mb-1" />
+                    <p className="text-xl font-bold text-emerald-700">{importResults.success}</p>
+                    <p className="text-xs text-emerald-600">Berhasil</p>
+                  </div>
+                  <div className="rounded-lg bg-red-50 p-3 text-center">
+                    <XCircle className="w-5 h-5 text-red-500 mx-auto mb-1" />
+                    <p className="text-xl font-bold text-red-700">{importResults.failed}</p>
+                    <p className="text-xs text-red-600">Gagal</p>
+                  </div>
+                </div>
+                {importResults.errors.length > 0 && (
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-red-700">Detail Kesalahan:</p>
+                    <ScrollArea className="max-h-32">
+                      <div className="space-y-1">
+                        {importResults.errors.map((err, idx) => (
+                          <p key={idx} className="text-xs text-red-600">• {err}</p>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setImportDialogOpen(false)}
+              disabled={importing}
+            >
+              Tutup
+            </Button>
+            <Button
+              onClick={handleImport}
+              disabled={importing || !importFile}
+              className="gap-2"
+            >
+              {importing ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Mengimport...
+                </>
+              ) : (
+                <>
+                  <Upload className="w-4 h-4" />
+                  Import Data
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Password Dialog */}
+      <ChangePasswordDialog
+        open={changePasswordOpen}
+        onOpenChange={setChangePasswordOpen}
+        userId={changePasswordUserId}
+      />
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

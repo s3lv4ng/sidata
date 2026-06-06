@@ -44,7 +44,11 @@ import {
   CalendarDays,
   AlertTriangle,
   Eye,
+  ChevronUp,
+  ChevronDown,
+  Copy,
 } from 'lucide-react'
+import { toast } from 'sonner'
 
 interface FormField {
   id: string
@@ -108,6 +112,14 @@ export default function AdminForms() {
   const [deleting, setDeleting] = useState(false)
   const [togglingId, setTogglingId] = useState<string | null>(null)
 
+  // Sorting state
+  type SortKey = 'title' | 'status' | 'deadline' | 'responseCount'
+  type SortDir = 'asc' | 'desc'
+  const [sortKey, setSortKey] = useState<SortKey>('deadline')
+  const [sortDir, setSortDir] = useState<SortDir>('asc')
+
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null)
+
   const userId = (session?.user as any)?.id || ''
 
   const fetchForms = useCallback(async () => {
@@ -137,6 +149,83 @@ export default function AdminForms() {
     if (statusFilter === 'ditutup') return matchesSearch && form.isClosed
     return matchesSearch
   })
+
+  // Sorted forms
+  const sortedForms = [...filteredForms].sort((a, b) => {
+    const dir = sortDir === 'asc' ? 1 : -1
+    switch (sortKey) {
+      case 'title':
+        return dir * a.title.localeCompare(b.title)
+      case 'status': {
+        const statusOrder = (f: FormItem) => {
+          if (f.isClosed) return 2
+          if (!f.isActive) return 1
+          return 0
+        }
+        return dir * (statusOrder(a) - statusOrder(b))
+      }
+      case 'deadline': {
+        const da = a.deadline ? new Date(a.deadline).getTime() : Infinity
+        const db2 = b.deadline ? new Date(b.deadline).getTime() : Infinity
+        return dir * (da - db2)
+      }
+      case 'responseCount':
+        return dir * ((a.responses?.length || 0) - (b.responses?.length || 0))
+      default:
+        return 0
+    }
+  })
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortDir(key === 'deadline' ? 'asc' : 'asc')
+    }
+  }
+
+  const SortIcon = ({ column }: { column: SortKey }) => {
+    if (sortKey !== column) return <ChevronUp className="w-3 h-3 opacity-30" />
+    return sortDir === 'asc' ? (
+      <ChevronUp className="w-3 h-3 text-primary" />
+    ) : (
+      <ChevronDown className="w-3 h-3 text-primary" />
+    )
+  }
+
+  const handleDuplicate = async (form: FormItem) => {
+    try {
+      setDuplicatingId(form.id)
+      const res = await fetch('/api/forms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: `${form.title} (Salinan)`,
+          description: form.description,
+          deadline: form.deadline,
+          createdById: userId,
+          fields: form.fields.map((f) => ({
+            label: f.label,
+            type: f.type,
+            required: f.required,
+            options: f.options ? JSON.parse(f.options) : null,
+          })),
+        }),
+      })
+      if (res.ok) {
+        await fetchForms()
+        toast.success('Form berhasil diduplikat')
+      } else {
+        toast.error('Gagal menduplikat form')
+      }
+    } catch (err) {
+      console.error('Failed to duplicate form:', err)
+      toast.error('Gagal menduplikat form')
+    } finally {
+      setDuplicatingId(null)
+    }
+  }
 
   const handleToggleActive = async (form: FormItem) => {
     try {
@@ -253,8 +342,8 @@ export default function AdminForms() {
           </CardContent>
         </Card>
 
-        {/* Forms Table */}
-        {filteredForms.length === 0 ? (
+        {/* Forms Table (desktop) */}
+        {sortedForms.length === 0 ? (
           <Card className="border-border/60">
             <CardContent className="flex flex-col items-center justify-center py-16">
               <FileText className="w-12 h-12 text-muted-foreground/20 mb-4" />
@@ -271,70 +360,268 @@ export default function AdminForms() {
             </CardContent>
           </Card>
         ) : (
-          <Card className="border-border/60 overflow-hidden">
-            <ScrollArea className="max-h-[calc(100vh-320px)]">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/30">
-                    <TableHead className="w-[50px] text-center">No</TableHead>
-                    <TableHead className="min-w-[200px]">Judul Form</TableHead>
-                    <TableHead className="w-[120px] text-center">Status</TableHead>
-                    <TableHead className="w-[140px]">Deadline</TableHead>
-                    <TableHead className="w-[180px]">Jumlah Respons</TableHead>
-                    <TableHead className="w-[150px] text-center">Aksi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredForms.map((form, index) => {
-                    const status = getStatusInfo(form)
-                    const deadlineInfo = getDeadlineInfo(form.deadline)
-                    const responseCount = form.responses?.length || 0
+          <>
+            {/* Desktop table view */}
+            <Card className="border-border/60 overflow-hidden hidden md:block">
+              <ScrollArea className="max-h-[calc(100vh-320px)]">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/30">
+                      <TableHead className="w-[50px] text-center">No</TableHead>
+                      <TableHead className="min-w-[200px]">
+                        <button className="flex items-center gap-1 hover:text-foreground transition-colors" onClick={() => handleSort('title')}>
+                          Judul Form <SortIcon column="title" />
+                        </button>
+                      </TableHead>
+                      <TableHead className="w-[120px] text-center">
+                        <button className="flex items-center gap-1 justify-center w-full hover:text-foreground transition-colors" onClick={() => handleSort('status')}>
+                          Status <SortIcon column="status" />
+                        </button>
+                      </TableHead>
+                      <TableHead className="w-[140px]">
+                        <button className="flex items-center gap-1 hover:text-foreground transition-colors" onClick={() => handleSort('deadline')}>
+                          Deadline <SortIcon column="deadline" />
+                        </button>
+                      </TableHead>
+                      <TableHead className="w-[180px]">
+                        <button className="flex items-center gap-1 hover:text-foreground transition-colors" onClick={() => handleSort('responseCount')}>
+                          Jumlah Respons <SortIcon column="responseCount" />
+                        </button>
+                      </TableHead>
+                      <TableHead className="w-[170px] text-center">Aksi</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sortedForms.map((form, index) => {
+                      const status = getStatusInfo(form)
+                      const deadlineInfo = getDeadlineInfo(form.deadline)
+                      const responseCount = form.responses?.length || 0
 
-                    return (
-                      <TableRow key={form.id} className="group">
-                        <TableCell className="text-center text-muted-foreground text-sm">
-                          {index + 1}
-                        </TableCell>
-                        <TableCell>
-                          <div className="min-w-0">
-                            <p className="font-medium text-sm text-foreground truncate max-w-[250px]">
-                              {form.title}
-                            </p>
-                            {form.description && (
-                              <p className="text-xs text-muted-foreground truncate max-w-[250px] mt-0.5">
-                                {form.description}
+                      return (
+                        <TableRow key={form.id} className="group">
+                          <TableCell className="text-center text-muted-foreground text-sm">
+                            {index + 1}
+                          </TableCell>
+                          <TableCell>
+                            <div className="min-w-0">
+                              <p className="font-medium text-sm text-foreground truncate max-w-[250px]">
+                                {form.title}
                               </p>
-                            )}
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-[10px] text-muted-foreground/60">
-                                {form.fields.length} field
-                              </span>
-                              <span className="text-[10px] text-muted-foreground/40">·</span>
-                              <span className="text-[10px] text-muted-foreground/60">
-                                {formatDate(form.createdAt)}
-                              </span>
+                              {form.description && (
+                                <p className="text-xs text-muted-foreground truncate max-w-[250px] mt-0.5">
+                                  {form.description}
+                                </p>
+                              )}
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-[10px] text-muted-foreground/60">
+                                  {form.fields.length} field
+                                </span>
+                                <span className="text-[10px] text-muted-foreground/40">·</span>
+                                <span className="text-[10px] text-muted-foreground/60">
+                                  {formatDate(form.createdAt)}
+                                </span>
+                              </div>
                             </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge
+                              className={`text-[11px] font-medium ${
+                                status.color === 'green'
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                  : status.color === 'yellow'
+                                  ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                                  : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
+                              }`}
+                              variant="outline"
+                            >
+                              {status.label}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {form.deadline ? (
+                              <div className="flex items-center gap-1.5">
+                                <CalendarDays
+                                  className={`w-3.5 h-3.5 shrink-0 ${
+                                    deadlineInfo.isOverdue
+                                      ? 'text-red-500'
+                                      : deadlineInfo.isUrgent
+                                      ? 'text-amber-500'
+                                      : 'text-muted-foreground'
+                                  }`}
+                                />
+                                <div>
+                                  <p
+                                    className={`text-xs font-medium ${
+                                      deadlineInfo.isOverdue
+                                        ? 'text-red-600'
+                                        : deadlineInfo.isUrgent
+                                        ? 'text-amber-600'
+                                        : 'text-foreground'
+                                    }`}
+                                  >
+                                    {deadlineInfo.text}
+                                  </p>
+                                  <p className="text-[10px] text-muted-foreground">
+                                    {formatDate(form.deadline)}
+                                  </p>
+                                </div>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="space-y-1.5">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-medium text-foreground">
+                                  {responseCount} respons
+                                </span>
+                              </div>
+                              <Progress
+                                value={responseCount > 0 ? Math.min((responseCount / Math.max(responseCount, 1)) * 100, 100) : 0}
+                                className="h-1.5"
+                              />
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center justify-center gap-1">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                                    onClick={() => handleEdit(form)}
+                                  >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Edit Form</TooltipContent>
+                              </Tooltip>
+
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-sky-600 hover:text-sky-700 hover:bg-sky-50"
+                                    onClick={() => handleDuplicate(form)}
+                                    disabled={duplicatingId === form.id}
+                                  >
+                                    {duplicatingId === form.id ? (
+                                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    ) : (
+                                      <Copy className="w-3.5 h-3.5" />
+                                    )}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Duplikat Form</TooltipContent>
+                              </Tooltip>
+
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className={`h-8 w-8 ${
+                                      form.isActive
+                                        ? 'text-amber-600 hover:text-amber-700 hover:bg-amber-50'
+                                        : 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50'
+                                    }`}
+                                    onClick={() => handleToggleActive(form)}
+                                    disabled={togglingId === form.id}
+                                  >
+                                    {togglingId === form.id ? (
+                                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    ) : form.isActive ? (
+                                      <ToggleRight className="w-4 h-4" />
+                                    ) : (
+                                      <ToggleLeft className="w-4 h-4" />
+                                    )}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {form.isActive ? 'Nonaktifkan' : 'Aktifkan'}
+                                </TooltipContent>
+                              </Tooltip>
+
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
+                                    onClick={() => {
+                                      setFormToDelete(form)
+                                      setDeleteDialogOpen(true)
+                                    }}
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Hapus Form</TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            </Card>
+
+            {/* Mobile card view */}
+            <div className="md:hidden space-y-3">
+              {sortedForms.map((form) => {
+                const status = getStatusInfo(form)
+                const deadlineInfo = getDeadlineInfo(form.deadline)
+                const responseCount = form.responses?.length || 0
+
+                return (
+                  <Card key={form.id} className="border-border/60">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-2 mb-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-sm text-foreground truncate">
+                            {form.title}
+                          </p>
+                          {form.description && (
+                            <p className="text-xs text-muted-foreground truncate mt-0.5">
+                              {form.description}
+                            </p>
+                          )}
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[10px] text-muted-foreground/60">
+                              {form.fields.length} field
+                            </span>
+                            <span className="text-[10px] text-muted-foreground/40">·</span>
+                            <span className="text-[10px] text-muted-foreground/60">
+                              {formatDate(form.createdAt)}
+                            </span>
                           </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge
-                            className={`text-[11px] font-medium ${
-                              status.color === 'green'
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                                : status.color === 'yellow'
-                                ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
-                                : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
-                            }`}
-                            variant="outline"
-                          >
-                            {status.label}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
+                        </div>
+                        <Badge
+                          className={`text-[11px] font-medium shrink-0 ${
+                            status.color === 'green'
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : status.color === 'yellow'
+                              ? 'bg-amber-50 text-amber-700 border-amber-200'
+                              : 'bg-red-50 text-red-700 border-red-200'
+                          }`}
+                          variant="outline"
+                        >
+                          {status.label}
+                        </Badge>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 mb-3">
+                        <div>
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Deadline</p>
                           {form.deadline ? (
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1">
                               <CalendarDays
-                                className={`w-3.5 h-3.5 shrink-0 ${
+                                className={`w-3 h-3 shrink-0 ${
                                   deadlineInfo.isOverdue
                                     ? 'text-red-500'
                                     : deadlineInfo.isUrgent
@@ -342,108 +629,89 @@ export default function AdminForms() {
                                     : 'text-muted-foreground'
                                 }`}
                               />
-                              <div>
-                                <p
-                                  className={`text-xs font-medium ${
-                                    deadlineInfo.isOverdue
-                                      ? 'text-red-600'
-                                      : deadlineInfo.isUrgent
-                                      ? 'text-amber-600'
-                                      : 'text-foreground'
-                                  }`}
-                                >
-                                  {deadlineInfo.text}
-                                </p>
-                                <p className="text-[10px] text-muted-foreground">
-                                  {formatDate(form.deadline)}
-                                </p>
-                              </div>
+                              <span
+                                className={`text-xs font-medium ${
+                                  deadlineInfo.isOverdue
+                                    ? 'text-red-600'
+                                    : deadlineInfo.isUrgent
+                                    ? 'text-amber-600'
+                                    : 'text-foreground'
+                                }`}
+                              >
+                                {deadlineInfo.text}
+                              </span>
                             </div>
                           ) : (
                             <span className="text-xs text-muted-foreground">—</span>
                           )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1.5">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-medium text-foreground">
-                                {responseCount} respons
-                              </span>
-                            </div>
-                            <Progress
-                              value={responseCount > 0 ? Math.min((responseCount / Math.max(responseCount, 1)) * 100, 100) : 0}
-                              className="h-1.5"
-                            />
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center justify-center gap-1">
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                                  onClick={() => handleEdit(form)}
-                                >
-                                  <Pencil className="w-3.5 h-3.5" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Edit Form</TooltipContent>
-                            </Tooltip>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Respons</p>
+                          <span className="text-xs font-medium text-foreground">{responseCount} respons</span>
+                        </div>
+                      </div>
 
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className={`h-8 w-8 ${
-                                    form.isActive
-                                      ? 'text-amber-600 hover:text-amber-700 hover:bg-amber-50'
-                                      : 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50'
-                                  }`}
-                                  onClick={() => handleToggleActive(form)}
-                                  disabled={togglingId === form.id}
-                                >
-                                  {togglingId === form.id ? (
-                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                  ) : form.isActive ? (
-                                    <ToggleRight className="w-4 h-4" />
-                                  ) : (
-                                    <ToggleLeft className="w-4 h-4" />
-                                  )}
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                {form.isActive ? 'Nonaktifkan' : 'Aktifkan'}
-                              </TooltipContent>
-                            </Tooltip>
-
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
-                                  onClick={() => {
-                                    setFormToDelete(form)
-                                    setDeleteDialogOpen(true)
-                                  }}
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Hapus Form</TooltipContent>
-                            </Tooltip>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-            </ScrollArea>
-          </Card>
+                      <div className="flex items-center gap-1.5 pt-2 border-t border-border/50">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs gap-1 flex-1"
+                          onClick={() => handleEdit(form)}
+                        >
+                          <Pencil className="w-3 h-3" /> Edit
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs gap-1 flex-1 text-sky-600 border-sky-200 hover:bg-sky-50"
+                          onClick={() => handleDuplicate(form)}
+                          disabled={duplicatingId === form.id}
+                        >
+                          {duplicatingId === form.id ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <Copy className="w-3 h-3" />
+                          )}
+                          Duplikat
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className={`h-7 text-xs gap-1 flex-1 ${
+                            form.isActive
+                              ? 'text-amber-600 border-amber-200 hover:bg-amber-50'
+                              : 'text-emerald-600 border-emerald-200 hover:bg-emerald-50'
+                          }`}
+                          onClick={() => handleToggleActive(form)}
+                          disabled={togglingId === form.id}
+                        >
+                          {togglingId === form.id ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : form.isActive ? (
+                            <ToggleRight className="w-3 h-3" />
+                          ) : (
+                            <ToggleLeft className="w-3 h-3" />
+                          )}
+                          {form.isActive ? 'Off' : 'On'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs gap-1 flex-1 text-red-500 border-red-200 hover:bg-red-50"
+                          onClick={() => {
+                            setFormToDelete(form)
+                            setDeleteDialogOpen(true)
+                          }}
+                        >
+                          <Trash2 className="w-3 h-3" /> Hapus
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </div>
+          </>
         )}
 
         {/* Delete Confirmation Dialog */}

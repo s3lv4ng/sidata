@@ -25,6 +25,8 @@ import {
   Home,
   Bell,
   History,
+  Moon,
+  Sun,
 } from 'lucide-react'
 
 interface MenuItem {
@@ -106,6 +108,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const userName = session?.user?.name || 'Administrator'
   const userRole = (session?.user as any)?.role || 'ADMIN'
   const userNip = (session?.user as any)?.nip || ''
+
+  // Dark mode state
+  const [darkMode, setDarkMode] = useState(() => {
+    if (typeof window === 'undefined') return false
+    const saved = localStorage.getItem('theme')
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+    return saved === 'dark' || (!saved && prefersDark)
+  })
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', darkMode)
+  }, [darkMode])
+
+  const toggleDarkMode = () => {
+    const newMode = !darkMode
+    setDarkMode(newMode)
+    document.documentElement.classList.toggle('dark', newMode)
+    localStorage.setItem('theme', newMode ? 'dark' : 'light')
+  }
 
   // Notification bell state
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([])
@@ -325,8 +346,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             ))}
           </nav>
 
-          {/* Notification Bell */}
+          {/* Right actions */}
           <div className="ml-auto flex items-center gap-3">
+            {/* Dark mode toggle */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleDarkMode}
+              className="shrink-0 text-muted-foreground hover:text-foreground"
+              aria-label={darkMode ? 'Beralih ke mode terang' : 'Beralih ke mode gelap'}
+            >
+              <span className="relative w-5 h-5">
+                <Sun className={`w-5 h-5 absolute inset-0 transition-all duration-300 ${darkMode ? 'opacity-0 rotate-90 scale-0' : 'opacity-100 rotate-0 scale-100'}`} />
+                <Moon className={`w-5 h-5 absolute inset-0 transition-all duration-300 ${darkMode ? 'opacity-100 rotate-0 scale-100' : 'opacity-0 -rotate-90 scale-0'}`} />
+              </span>
+            </Button>
+
+            {/* Notification Bell */}
             <Popover open={bellOpen} onOpenChange={setBellOpen}>
               <PopoverTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative shrink-0 text-muted-foreground hover:text-foreground">
