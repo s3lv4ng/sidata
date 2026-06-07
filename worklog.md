@@ -363,3 +363,36 @@ Stage Summary:
 - Optional chaining safety net prevents future crashes if field relation is missing
 - Google Drive upload flow is ALREADY wired up in /api/upload → calls uploadToDrive() (non-blocking)
 - Google Drive upload still fails due to My Drive quota limitation (known issue, requires Shared Drive)
+
+---
+Task ID: 8
+Agent: main
+Task: Make uploaded files downloadable in response detail + Add edit ASN data on homepage
+
+Work Log:
+- **Feature 1: Downloadable files in response detail (AdminResponses.tsx)**
+  - Updated /api/file/route.ts to support `?download=true` query parameter (sets Content-Disposition to attachment)
+  - Updated response detail dialog to support `file_upload`, `image_upload`, and `multi_upload` field types
+  - `file_upload`: Shows view link + download button ("Unduh") + Google Drive link if available
+  - `image_upload`: Shows thumbnail preview (max 200x150px) + view link + download button + Drive link
+  - `multi_upload`: Parses JSON array from value, shows each file with view/download/Drive links
+  - Added type badges: "File", "Gambar", "Multi File" with appropriate colors
+  - Added missing field type labels (email, phone, url, rating, image_upload, multi_upload)
+  - Added `ImageIcon` import from lucide-react
+
+- **Feature 2: Edit ASN Profile on homepage (ASNHomepage.tsx)**
+  - Updated PATCH /api/asn/[id] to also accept `jabatan`, `pangkat`, `unitKerja` fields
+  - Added pencil edit button (Pencil icon) on profile summary card
+  - Added Edit Profile Dialog with 5 fields: Email, Phone, Jabatan, Pangkat, Unit Kerja
+  - Each field has an icon prefix (Mail, Phone, Briefcase, Award, Building2)
+  - Pre-fills current values from session data
+  - Saves via PATCH API, shows success animation, auto-reloads page
+  - Error/success feedback with loading states
+  - Note at bottom: "Untuk perubahan Nama, NIP, dan Bidang, hubungi administrator."
+  - Responsive design for mobile
+
+Stage Summary:
+- Response detail files are now downloadable ✅ (view + download links, image thumbnails, multi-file support)
+- ASN users can now edit their own profile data ✅ (email, phone, jabatan, pangkat, unitKerja)
+- All lint passes (only pre-existing custom-server.js warnings)
+- Verified with agent-browser: both features work correctly

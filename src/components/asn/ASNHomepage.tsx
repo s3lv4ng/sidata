@@ -37,8 +37,12 @@ import {
   Sun,
   KeyRound,
   HelpCircle,
+  Pencil,
 } from 'lucide-react'
 import jsPDF from 'jspdf'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import ASNMobileNav from './ASNMobileNav'
 import ChangePasswordDialog from '@/components/shared/ChangePasswordDialog'
 
@@ -166,6 +170,13 @@ export default function ASNHomepage() {
 
   // Change password dialog
   const [changePasswordOpen, setChangePasswordOpen] = useState(false)
+
+  // Edit profile dialog
+  const [editProfileOpen, setEditProfileOpen] = useState(false)
+  const [editForm, setEditForm] = useState({ email: '', phone: '', jabatan: '', pangkat: '', unitKerja: '' })
+  const [savingProfile, setSavingProfile] = useState(false)
+  const [editSuccess, setEditSuccess] = useState(false)
+  const [editError, setEditError] = useState('')
 
   // Dark mode state
   const [darkMode, setDarkMode] = useState(() => {
@@ -400,6 +411,48 @@ export default function ASNHomepage() {
   const userJabatan = (session?.user as any)?.jabatan || ''
   const userBidang = (session?.user as any)?.bidang || ''
   const userPangkat = (session?.user as any)?.pangkat || ''
+  const userUnitKerja = (session?.user as any)?.unitKerja || ''
+  const userEmail = (session?.user as any)?.email || ''
+  const userPhone = (session?.user as any)?.phone || ''
+
+  const handleEditProfile = () => {
+    setEditForm({
+      email: userEmail,
+      phone: userPhone,
+      jabatan: userJabatan,
+      pangkat: userPangkat,
+      unitKerja: userUnitKerja,
+    })
+    setEditSuccess(false)
+    setEditError('')
+    setEditProfileOpen(true)
+  }
+
+  const handleSaveProfile = async () => {
+    setSavingProfile(true)
+    setEditError('')
+    try {
+      const res = await fetch(`/api/asn/${userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm),
+      })
+      if (res.ok) {
+        setEditSuccess(true)
+        setTimeout(() => {
+          setEditProfileOpen(false)
+          window.location.reload()
+        }, 1500)
+      } else {
+        const data = await res.json()
+        setEditError(data.error || 'Gagal menyimpan data')
+      }
+    } catch {
+      setEditError('Terjadi kesalahan. Silakan coba lagi.')
+    } finally {
+      setSavingProfile(false)
+    }
+  }
 
   // Get initials for avatar
   const getInitials = (name: string) => {
@@ -545,6 +598,16 @@ export default function ASNHomepage() {
                   )}
                 </div>
               </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleEditProfile}
+                className="shrink-0 text-muted-foreground hover:text-primary h-8 w-8"
+                aria-label="Edit Profil"
+                title="Edit Data Profil"
+              >
+                <Pencil className="w-4 h-4" />
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -843,6 +906,136 @@ export default function ASNHomepage() {
         onOpenChange={setChangePasswordOpen}
         userId={userId}
       />
+
+      {/* Edit Profile Dialog */}
+      <Dialog open={editProfileOpen} onOpenChange={setEditProfileOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Data Profil</DialogTitle>
+            <DialogDescription>Perbarui informasi profil Anda</DialogDescription>
+          </DialogHeader>
+
+          {editSuccess ? (
+            <div className="flex flex-col items-center justify-center py-6 gap-3">
+              <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-950/50 flex items-center justify-center">
+                <CheckCircle2 className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">Data profil berhasil diperbarui!</p>
+              <p className="text-xs text-muted-foreground">Halaman akan dimuat ulang...</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-email">Email</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="edit-email"
+                    type="email"
+                    placeholder="email@contoh.com"
+                    className="pl-9"
+                    value={editForm.email}
+                    onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-phone">No. Telepon</Label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="edit-phone"
+                    type="tel"
+                    placeholder="08xxxxxxxxxx"
+                    className="pl-9"
+                    value={editForm.phone}
+                    onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-jabatan">Jabatan</Label>
+                <div className="relative">
+                  <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="edit-jabatan"
+                    type="text"
+                    placeholder="Jabatan Anda"
+                    className="pl-9"
+                    value={editForm.jabatan}
+                    onChange={(e) => setEditForm({ ...editForm, jabatan: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-pangkat">Pangkat / Golongan</Label>
+                <div className="relative">
+                  <Award className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="edit-pangkat"
+                    type="text"
+                    placeholder="Pangkat / Golongan"
+                    className="pl-9"
+                    value={editForm.pangkat}
+                    onChange={(e) => setEditForm({ ...editForm, pangkat: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-unitKerja">Unit Kerja</Label>
+                <div className="relative">
+                  <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="edit-unitKerja"
+                    type="text"
+                    placeholder="Unit Kerja Anda"
+                    className="pl-9"
+                    value={editForm.unitKerja}
+                    onChange={(e) => setEditForm({ ...editForm, unitKerja: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              {editError && (
+                <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 rounded-md px-3 py-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  {editError}
+                </div>
+              )}
+
+              <p className="text-xs text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
+                Untuk perubahan Nama, NIP, dan Bidang, hubungi administrator.
+              </p>
+            </div>
+          )}
+
+          {!editSuccess && (
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button
+                variant="outline"
+                onClick={() => setEditProfileOpen(false)}
+                disabled={savingProfile}
+              >
+                Batal
+              </Button>
+              <Button onClick={handleSaveProfile} disabled={savingProfile}>
+                {savingProfile ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Menyimpan...
+                  </>
+                ) : (
+                  'Simpan'
+                )}
+              </Button>
+            </DialogFooter>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Mobile bottom navigation */}
       <ASNMobileNav activeTab="beranda" />

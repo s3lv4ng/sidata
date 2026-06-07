@@ -64,6 +64,7 @@ import {
   TrendingUp,
   Table2,
   Upload,
+  ImageIcon,
 } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts'
 import * as XLSX from 'xlsx'
@@ -1069,8 +1070,23 @@ export default function AdminResponses() {
                     const displayValue = fieldResp
                       ? parseFieldValue(fieldResp.value, field.type)
                       : '—'
-                    const isFileField = field.type === 'file_upload'
-                    const hasFile = isFileField && fieldResp?.filePath
+                    const isSingleFileField = field.type === 'file_upload' || field.type === 'image_upload'
+                    const isMultiFileField = field.type === 'multi_upload'
+                    const isFileField = isSingleFileField || isMultiFileField
+                    const hasFile = isSingleFileField && fieldResp?.filePath
+                    const hasMultiFiles = isMultiFileField && fieldResp?.value
+                    let multiFiles: Array<{ name: string; path: string; driveFileId?: string; driveLink?: string }> = []
+                    if (hasMultiFiles) {
+                      try {
+                        const parsed = JSON.parse(fieldResp.value!)
+                        if (Array.isArray(parsed)) {
+                          multiFiles = parsed
+                        }
+                      } catch {
+                        // not valid JSON
+                      }
+                    }
+                    const isImageField = field.type === 'image_upload'
 
                     return (
                       <div
@@ -1080,7 +1096,7 @@ export default function AdminResponses() {
                         <div className="flex items-start justify-between gap-2 mb-1">
                           <p className="text-sm font-medium text-foreground">
                             {field.label}
-                            {field.type !== 'file_upload' && (
+                            {!isFileField && (
                               <span className="text-xs text-muted-foreground ml-1">
                                 ({field.type === 'short_text'
                                   ? 'Isian Singkat'
@@ -1096,24 +1112,68 @@ export default function AdminResponses() {
                                   ? 'Checkbox'
                                   : field.type === 'dropdown'
                                   ? 'Dropdown'
-                                  : 'Upload File'})
+                                  : field.type === 'email'
+                                  ? 'Email'
+                                  : field.type === 'phone'
+                                  ? 'Telepon'
+                                  : field.type === 'url'
+                                  ? 'URL'
+                                  : field.type === 'rating'
+                                  ? 'Rating'
+                                  : ''})
                               </span>
+                            )}
+                            {isFileField && (
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] ml-1.5 py-0 px-1.5 bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-900/40 dark:text-teal-300 dark:border-teal-800"
+                              >
+                                {field.type === 'file_upload'
+                                  ? 'File'
+                                  : field.type === 'image_upload'
+                                  ? 'Gambar'
+                                  : 'Multi File'}
+                              </Badge>
                             )}
                           </p>
                         </div>
 
-                        {isFileField ? (
+                        {isSingleFileField ? (
                           hasFile ? (
-                            <div className="space-y-1.5 mt-1">
-                              <div className="flex items-center gap-2">
-                                <Paperclip className="w-3.5 h-3.5 text-muted-foreground" />
+                            <div className="space-y-2 mt-1">
+                              {isImageField && (
+                                <div className="mt-1">
+                                  <img
+                                    src={fieldResp.filePath}
+                                    alt={fieldResp.fileName || 'Preview gambar'}
+                                    className="max-w-[200px] max-h-[150px] rounded-md border border-border/50 object-cover"
+                                    onError={(e) => {
+                                      (e.target as HTMLImageElement).style.display = 'none'
+                                    }}
+                                  />
+                                </div>
+                              )}
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {isImageField ? (
+                                  <ImageIcon className="w-3.5 h-3.5 text-muted-foreground" />
+                                ) : (
+                                  <Paperclip className="w-3.5 h-3.5 text-muted-foreground" />
+                                )}
                                 <a
                                   href={fieldResp.filePath}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="text-sm text-blue-600 hover:underline"
                                 >
-                                  {fieldResp.fileName || 'Unduh File'}
+                                  {fieldResp.fileName || 'Lihat File'}
+                                </a>
+                                <a
+                                  href={`${fieldResp.filePath}${fieldResp.filePath.includes('?') ? '&' : '?'}download=true`}
+                                  className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                                  title="Unduh file"
+                                >
+                                  <Download className="w-3.5 h-3.5" />
+                                  Unduh
                                 </a>
                               </div>
                               {fieldResp?.driveLink && (
@@ -1130,6 +1190,48 @@ export default function AdminResponses() {
                                   </a>
                                 </div>
                               )}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-muted-foreground mt-1">
+                              Tidak ada file diunggah
+                            </p>
+                          )
+                        ) : isMultiFileField ? (
+                          hasMultiFiles && multiFiles.length > 0 ? (
+                            <div className="space-y-2 mt-1">
+                              {multiFiles.map((mf, mfIdx) => (
+                                <div key={mfIdx} className="flex items-center gap-2 flex-wrap">
+                                  <Paperclip className="w-3.5 h-3.5 text-muted-foreground" />
+                                  <a
+                                    href={mf.path}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-sm text-blue-600 hover:underline"
+                                  >
+                                    {mf.name || `File ${mfIdx + 1}`}
+                                  </a>
+                                  <a
+                                    href={`${mf.path}${mf.path.includes('?') ? '&' : '?'}download=true`}
+                                    className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                                    title="Unduh file"
+                                  >
+                                    <Download className="w-3.5 h-3.5" />
+                                    Unduh
+                                  </a>
+                                  {mf.driveLink && (
+                                    <a
+                                      href={mf.driveLink}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-xs text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
+                                    >
+                                      <HardDrive className="w-3 h-3" />
+                                      Drive
+                                      <ExternalLink className="w-2.5 h-2.5" />
+                                    </a>
+                                  )}
+                                </div>
+                              ))}
                             </div>
                           ) : (
                             <p className="text-sm text-muted-foreground mt-1">

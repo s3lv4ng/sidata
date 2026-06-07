@@ -47,11 +47,15 @@ export async function GET(request: NextRequest) {
     }
 
     const contentType = contentTypes[ext] || 'application/octet-stream'
+    const download = request.nextUrl.searchParams.get('download')
+    const disposition = download === 'true'
+      ? `attachment; filename="${path.basename(fullPath)}"`
+      : `inline; filename="${path.basename(fullPath)}"`
 
     return new NextResponse(fileBuffer, {
       headers: {
         'Content-Type': contentType,
-        'Content-Disposition': `inline; filename="${path.basename(fullPath)}"`,
+        'Content-Disposition': disposition,
         'Cache-Control': 'public, max-age=86400',
       },
     })

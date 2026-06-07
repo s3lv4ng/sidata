@@ -37,16 +37,19 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   }
 }
 
-// PATCH /api/asn/[id] - Self-service update (email, phone only)
+// PATCH /api/asn/[id] - Self-service update (email, phone, jabatan, pangkat, unitKerja)
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const body = await request.json();
-    const { email, phone } = body;
+    const { email, phone, jabatan, pangkat, unitKerja } = body;
 
     const data: Record<string, unknown> = {};
     if (email !== undefined) data.email = email;
     if (phone !== undefined) data.phone = phone;
+    if (jabatan !== undefined) data.jabatan = jabatan;
+    if (pangkat !== undefined) data.pangkat = pangkat;
+    if (unitKerja !== undefined) data.unitKerja = unitKerja;
 
     if (Object.keys(data).length === 0) {
       return NextResponse.json({ error: "Tidak ada data untuk diperbarui" }, { status: 400 });
