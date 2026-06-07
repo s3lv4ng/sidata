@@ -196,3 +196,61 @@ Stage Summary:
 - Frontend shows context-specific fix instructions based on error type
 - Google Sheets API also updated to use GoogleAuth
 - The actual issue for this user: Google Drive API needs to be enabled in Google Cloud Console
+
+---
+Task ID: 4
+Agent: main
+Task: Full Google Drive & Google Sheets integration
+
+Work Log:
+- Created `/src/lib/google-sheets.ts` library with:
+  - `getSheetsConfig()` - reads Service Account credentials from Drive settings + Spreadsheet ID from Sheets settings
+  - `isSheetsConfigured()` - checks if all required settings exist
+  - `createSheetsClient()` - creates authenticated Google Sheets client using GoogleAuth + Service Account
+  - `testSheetsConnection()` - tests connection and returns detailed error info
+  - `getSpreadsheetInfo()` - gets spreadsheet title, URL, and sheet list
+  - `syncAsnData()` - syncs all ASN data to Google Sheets
+  - `syncFormResponses(formId)` - syncs form responses to a dedicated sheet per form
+  - `appendFormResponse(formId, data)` - appends single response (for auto-sync)
+  - `parseSheetsError()` - same pattern as Drive, detects API disabled, auth errors, permission errors, not found errors
+- Rewrote `/api/google-sheets/route.ts`:
+  - GET endpoint uses `testSheetsConnection()` for detailed status
+  - POST endpoint supports `sync-asn` and `sync-responses` actions
+  - Removed API Key requirement - Service Account from Drive settings is used instead
+- Updated `/api/responses/route.ts`:
+  - Added auto-sync to Google Sheets on form submission
+  - Checks `googleSheetsAutoSync` setting before syncing
+  - Auto-sync is non-blocking (fire-and-forget)
+  - Fetches user info and form fields for proper data mapping
+- Redesigned Google Sheets tab in AdminSettings:
+  - Added connection status badge (Terhubung/Gagal/Belum Dikonfigurasi)
+  - Added "Tes Koneksi" button with loading state
+  - Added specific error messages with troubleshooting guides (API disabled, permission denied, auth error)
+  - Removed `googleSheetsApiKey` field (no longer needed - uses Service Account)
+  - Added Auto-Sync toggle with immediate save
+  - Added manual "Sync Data ASN" button (only visible when connected)
+  - Added info note about Service Account sharing
+  - Updated Preview card to use `sheetsStatus` state
+- Updated SetupWizard:
+  - Removed API Key field from Google Integration step
+  - Added info note about Service Account sharing for Sheets
+  - Updated completion summary to reference Spreadsheet ID instead of API Key
+- Added "Sync ke Sheets" button in AdminResponses:
+  - Appears next to "Export Excel" button
+  - Syncs selected form's responses to Google Sheets
+  - Shows loading state during sync
+- Verified with agent-browser:
+  - Google Drive tab shows specific error ("Folder ID tidak ditemukan") with step-by-step instructions
+  - Google Sheets tab shows "Gagal Terhubung" badge, specific error with troubleshooting steps
+  - Auto-sync toggle visible and working
+  - Spreadsheet ID and Sheet Name fields visible with save buttons
+  - AdminResponses shows "Export Excel" and "Sync ke Sheets" buttons
+
+Stage Summary:
+- Google Drive integration: Upload on form submit → local storage + Google Drive, Drive links stored in DB
+- Google Sheets integration: Full CRUD with Service Account auth, auto-sync on submit, manual sync buttons
+- Both integrations use GoogleAuth (not JWT) for better error messages
+- Detailed error handling with specific troubleshooting guides for each error type
+- Simplified settings: No separate API Key needed for Sheets, uses same Service Account as Drive
+- Auto-sync feature: Toggle in settings, appends new responses automatically
+- All lint passes (only pre-existing custom-server.js warnings)

@@ -62,6 +62,8 @@ import {
   HardDrive,
   BarChart3,
   TrendingUp,
+  Table2,
+  Upload,
 } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts'
 import * as XLSX from 'xlsx'
@@ -218,6 +220,7 @@ export default function AdminResponses() {
 
   // All ASN for not-responded list
   const [allASN, setAllASN] = useState<ASNItem[]>([])
+  const [syncingToSheets, setSyncingToSheets] = useState(false)
 
   // Fetch forms list
   useEffect(() => {
@@ -434,16 +437,48 @@ export default function AdminResponses() {
             </p>
           </div>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-2"
-          onClick={handleExport}
-          disabled={!selectedFormId || filteredResponses.length === 0}
-        >
-          <Download className="w-4 h-4" />
-          Export Excel
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={handleExport}
+            disabled={!selectedFormId || filteredResponses.length === 0}
+          >
+            <Download className="w-4 h-4" />
+            Export Excel
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            disabled={!selectedFormId || filteredResponses.length === 0 || syncingToSheets}
+            onClick={async () => {
+              if (!selectedFormId) return
+              setSyncingToSheets(true)
+              try {
+                const res = await fetch('/api/google-sheets', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ action: 'sync-responses', formId: selectedFormId }),
+                })
+                const data = await res.json()
+                if (res.ok && data.success) {
+                  addNotification(data.message, 'success')
+                } else {
+                  addNotification(data.error || 'Gagal sinkronisasi ke Sheets', 'error')
+                }
+              } catch {
+                addNotification('Gagal sinkronisasi ke Sheets', 'error')
+              } finally {
+                setSyncingToSheets(false)
+              }
+            }}
+          >
+            {syncingToSheets ? <Loader2 className="w-4 h-4 animate-spin" /> : <Table2 className="w-4 h-4" />}
+            {syncingToSheets ? 'Syncing...' : 'Sync ke Sheets'}
+          </Button>
+        </div>
       </div>
 
       {/* Form Selector */}

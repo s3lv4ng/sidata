@@ -180,6 +180,25 @@ export default function AdminSettings() {
   const [editingPrivateKey, setEditingPrivateKey] = useState(false)
   const [editingClientSecret, setEditingClientSecret] = useState(false)
 
+  // Google Sheets state
+  const [sheetsStatus, setSheetsStatus] = useState<{
+    configured: boolean
+    connected: boolean
+    spreadsheet?: { title: string; id: string; url: string; sheets: Array<{ title: string; sheetId: number }> }
+    message: string
+    error?: {
+      message: string
+      code?: number
+      reason?: string
+      isApiDisabled?: boolean
+      isAuthError?: boolean
+      isNotFoundError?: boolean
+      isPermissionError?: boolean
+    }
+  } | null>(null)
+  const [testingSheets, setTestingSheets] = useState(false)
+  const [syncingAsn, setSyncingAsn] = useState(false)
+
   const fetchSettings = useCallback(async () => {
     try {
       setLoading(true)
@@ -221,6 +240,27 @@ export default function AdminSettings() {
   useEffect(() => {
     checkDriveStatus()
   }, [checkDriveStatus])
+
+  const checkSheetsStatus = useCallback(async () => {
+    setTestingSheets(true)
+    try {
+      const res = await fetch('/api/google-sheets')
+      if (res.ok) {
+        const data = await res.json()
+        setSheetsStatus(data)
+      } else {
+        setSheetsStatus({ configured: false, connected: false, message: 'Gagal mengecek status' })
+      }
+    } catch {
+      setSheetsStatus({ configured: false, connected: false, message: 'Gagal terhubung ke server' })
+    } finally {
+      setTestingSheets(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    checkSheetsStatus()
+  }, [checkSheetsStatus])
 
   const handleChange = (key: string, value: string) => {
     setSettings((prev) => ({ ...prev, [key]: value }))
@@ -1162,106 +1202,152 @@ export default function AdminSettings() {
         <TabsContent value="sheets" className="space-y-4 mt-4">
           <Card className="border-border/60">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
-                <Table2 className="w-4 h-4" />
-                Integrasi Google Sheets
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50/50 p-3 dark:border-blue-800 dark:bg-blue-900/10">
-                <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-                <div className="text-sm text-blue-700 dark:text-blue-300">
-                  <p className="font-medium mb-1">Sinkronkan data ke Google Sheets</p>
-                  <p className="text-xs text-blue-600 dark:text-blue-400">
-                    Data ASN dan hasil pengisian form dapat disinkronkan otomatis ke Google Sheets. Memerlukan konfigurasi Service Account yang sama dengan Google Drive.
-                  </p>
-                </div>
-              </div>
-
-              {/* Sheets configuration status */}
-              {(() => {
-                const hasApiKey = !!(settings.googleSheetsApiKey || '').trim()
-                const hasSpreadsheetId = !!(settings.googleSheetsSpreadsheetId || '').trim()
-                const isSheetsConfigured = hasApiKey && hasSpreadsheetId
-                return (
-                  <div className={`flex items-center gap-2 rounded-lg border p-2.5 ${
-                    isSheetsConfigured
-                      ? 'border-emerald-200 bg-emerald-50/50 dark:border-emerald-800 dark:bg-emerald-900/10'
-                      : 'border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-900/10'
-                  }`}>
-                    {isSheetsConfigured ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                    ) : (
-                      <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-                    )}
-                    <span className={`text-xs font-medium ${
-                      isSheetsConfigured
-                        ? 'text-emerald-700 dark:text-emerald-300'
-                        : 'text-amber-700 dark:text-amber-300'
-                    }`}>
-                      {isSheetsConfigured
-                        ? 'Google Sheets terkonfigurasi.'
-                        : !hasApiKey && !hasSpreadsheetId
-                          ? 'API Key dan Spreadsheet ID belum diisi.'
-                          : !hasApiKey
-                            ? 'API Key belum diisi.'
-                            : 'Spreadsheet ID belum diisi.'
-                      }
-                    </span>
-                  </div>
-                )
-              })()}
-
-              <div className="space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-start gap-3">
-                  <div className="flex-1 space-y-1.5">
-                    <div className="flex items-center gap-2">
-                      <Key className="w-3.5 h-3.5 text-muted-foreground" />
-                      <Label className="text-sm font-medium">Google Sheets API Key</Label>
-                      {isChanged('googleSheetsApiKey') && (
-                        <Badge
-                          variant="outline"
-                          className="text-[9px] font-medium bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800"
-                        >
-                          Diubah
-                        </Badge>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                  <Table2 className="w-4 h-4" />
+                  Integrasi Google Sheets
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  {sheetsStatus && (
+                    <Badge
+                      variant="outline"
+                      className={`text-[10px] ${
+                        sheetsStatus.connected
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800'
+                          : sheetsStatus.configured
+                            ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800'
+                            : 'bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-900/20 dark:text-gray-400 dark:border-gray-800'
+                      }`}
+                    >
+                      {sheetsStatus.connected ? (
+                        <><Table2 className="w-3 h-3 mr-1" /> Terhubung</>
+                      ) : sheetsStatus.configured ? (
+                        <><CloudOff className="w-3 h-3 mr-1" /> Gagal Terhubung</>
+                      ) : (
+                        <><CloudOff className="w-3 h-3 mr-1" /> Belum Dikonfigurasi</>
                       )}
-                      {!!originalSettings.googleSheetsApiKey && !isChanged('googleSheetsApiKey') && (
-                        <Badge variant="outline" className="text-[9px] font-medium bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800">
-                          Terisi
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground">API Key untuk akses read-only ke Google Sheets</p>
-                    <Input
-                      placeholder="AIzaSy..."
-                      value={settings.googleSheetsApiKey || ''}
-                      onChange={(e) => handleChange('googleSheetsApiKey', e.target.value)}
-                      className={isChanged('googleSheetsApiKey') ? 'border-amber-300 focus-visible:ring-amber-200' : ''}
-                    />
-                  </div>
+                    </Badge>
+                  )}
                   <Button
+                    variant="outline"
                     size="sm"
-                    variant={isChanged('googleSheetsApiKey') ? 'default' : 'outline'}
-                    disabled={!isChanged('googleSheetsApiKey') || saving.has('googleSheetsApiKey')}
-                    onClick={() => handleSaveOne('googleSheetsApiKey')}
-                    className="gap-1.5 shrink-0 sm:self-end"
+                    onClick={checkSheetsStatus}
+                    disabled={testingSheets}
+                    className="h-7 gap-1.5 text-xs"
                   >
-                    {saving.has('googleSheetsApiKey') ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                    {saving.has('googleSheetsApiKey') ? 'Menyimpan...' : isChanged('googleSheetsApiKey') ? 'Simpan' : 'Tersimpan'}
+                    <RefreshCw className={`w-3 h-3 ${testingSheets ? 'animate-spin' : ''}`} />
+                    Tes Koneksi
                   </Button>
                 </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Connected info */}
+              {sheetsStatus && sheetsStatus.connected && sheetsStatus.spreadsheet && (
+                <div className="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 dark:border-emerald-800 dark:bg-emerald-900/10">
+                  <Table2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300 truncate">
+                      {sheetsStatus.spreadsheet.title}
+                    </p>
+                    <p className="text-[11px] text-emerald-600/70 dark:text-emerald-400/70">
+                      {sheetsStatus.spreadsheet.sheets.length} sheet: {sheetsStatus.spreadsheet.sheets.map(s => s.title).join(', ')}
+                    </p>
+                  </div>
+                  <a
+                    href={sheetsStatus.spreadsheet.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shrink-0"
+                  >
+                    <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs">
+                      <ExternalLink className="w-3 h-3" />
+                      Buka
+                    </Button>
+                  </a>
+                </div>
+              )}
 
+              {/* Error info */}
+              {sheetsStatus && !sheetsStatus.connected && sheetsStatus.configured && (
+                <div className="space-y-2">
+                  <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50/50 p-3 dark:border-red-800 dark:bg-red-900/10">
+                    <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-red-700 dark:text-red-300 font-medium">Koneksi Gagal</p>
+                      <p className="text-xs text-red-600/80 dark:text-red-400/80 mt-1">{sheetsStatus.message}</p>
+                    </div>
+                  </div>
+                  {sheetsStatus.error?.isApiDisabled && (
+                    <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50/50 p-3 dark:border-amber-800 dark:bg-amber-900/10">
+                      <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                      <div className="text-xs text-amber-700 dark:text-amber-300 space-y-1.5">
+                        <p className="font-medium">Cara Mengaktifkan Google Sheets API:</p>
+                        <ol className="list-decimal list-inside space-y-0.5">
+                          <li>Buka <a href="https://console.cloud.google.com/apis/library/sheets.googleapis.com" target="_blank" rel="noopener noreferrer" className="underline inline-flex items-center gap-0.5 font-medium">Google Sheets API <ExternalLink className="w-2.5 h-2.5" /></a></li>
+                          <li>Pastikan project yang benar dipilih di bagian atas</li>
+                          <li>Klik <strong>Aktifkan/Enable</strong></li>
+                          <li>Tunggu beberapa menit hingga propagasi selesai</li>
+                          <li>Klik <strong>Tes Koneksi</strong> lagi di atas</li>
+                        </ol>
+                      </div>
+                    </div>
+                  )}
+                  {sheetsStatus.error?.isPermissionError && (
+                    <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50/50 p-3 dark:border-amber-800 dark:bg-amber-900/10">
+                      <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                      <div className="text-xs text-amber-700 dark:text-amber-300 space-y-1.5">
+                        <p className="font-medium">Cara Memberikan Akses Spreadsheet:</p>
+                        <ol className="list-decimal list-inside space-y-0.5">
+                          <li>Buka Google Sheets dan buka spreadsheet target</li>
+                          <li>Klik <strong>Bagikan/Share</strong> di pojok kanan atas</li>
+                          <li>Tambahkan email Service Account dari tab Google Drive</li>
+                          <li>Beri akses <strong>Editor</strong></li>
+                          <li>Klik <strong>Kirim/Send</strong></li>
+                        </ol>
+                      </div>
+                    </div>
+                  )}
+                  {sheetsStatus.error?.isAuthError && (
+                    <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50/50 p-3 dark:border-amber-800 dark:bg-amber-900/10">
+                      <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                      <div className="text-xs text-amber-700 dark:text-amber-300 space-y-1.5">
+                        <p className="font-medium">Kredensial Tidak Valid</p>
+                        <p>Periksa Service Account Email dan Private Key di tab Google Drive. Google Sheets menggunakan kredensial yang sama.</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Not configured info */}
+              {sheetsStatus && !sheetsStatus.configured && (
+                <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50/50 p-3 dark:border-blue-800 dark:bg-blue-900/10">
+                  <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                  <div className="text-sm text-blue-700 dark:text-blue-300">
+                    <p className="font-medium mb-1">Cara Mengatur Google Sheets:</p>
+                    <ol className="list-decimal list-inside space-y-0.5 text-xs text-blue-600 dark:text-blue-400">
+                      <li>Pastikan Google Drive sudah terkonfigurasi (Service Account)</li>
+                      <li>Buat atau buka Google Spreadsheet</li>
+                      <li>Bagikan spreadsheet ke email Service Account dengan akses Editor</li>
+                      <li>Copy Spreadsheet ID dari URL</li>
+                      <li>Masukkan Spreadsheet ID dan nama sheet di bawah</li>
+                    </ol>
+                  </div>
+                </div>
+              )}
+
+              <Separator />
+
+              {/* Spreadsheet settings */}
+              <div className="space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-start gap-3">
                   <div className="flex-1 space-y-1.5">
                     <div className="flex items-center gap-2">
                       <Table2 className="w-3.5 h-3.5 text-muted-foreground" />
                       <Label className="text-sm font-medium">Spreadsheet ID</Label>
                       {isChanged('googleSheetsSpreadsheetId') && (
-                        <Badge
-                          variant="outline"
-                          className="text-[9px] font-medium bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800"
-                        >
+                        <Badge variant="outline" className="text-[9px] font-medium bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800">
                           Diubah
                         </Badge>
                       )}
@@ -1298,12 +1384,9 @@ export default function AdminSettings() {
                   <div className="flex-1 space-y-1.5">
                     <div className="flex items-center gap-2">
                       <FileText className="w-3.5 h-3.5 text-muted-foreground" />
-                      <Label className="text-sm font-medium">Nama Sheet Default</Label>
+                      <Label className="text-sm font-medium">Nama Sheet Default (Data ASN)</Label>
                       {isChanged('googleSheetsSheetName') && (
-                        <Badge
-                          variant="outline"
-                          className="text-[9px] font-medium bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800"
-                        >
+                        <Badge variant="outline" className="text-[9px] font-medium bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800">
                           Diubah
                         </Badge>
                       )}
@@ -1332,6 +1415,85 @@ export default function AdminSettings() {
                     {saving.has('googleSheetsSheetName') ? 'Menyimpan...' : isChanged('googleSheetsSheetName') ? 'Simpan' : 'Tersimpan'}
                   </Button>
                 </div>
+              </div>
+
+              <Separator />
+
+              {/* Auto-sync toggle */}
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-medium">Auto-Sync ke Google Sheets</Label>
+                  <p className="text-xs text-muted-foreground">Otomatis sinkronkan data form ke Sheets saat pengisian disubmit</p>
+                </div>
+                <Switch
+                  checked={settings.googleSheetsAutoSync === 'true'}
+                  onCheckedChange={async (checked) => {
+                    const newValue = checked ? 'true' : 'false'
+                    handleChange('googleSheetsAutoSync', newValue)
+                    try {
+                      const res = await fetch('/api/settings', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ settings: { googleSheetsAutoSync: newValue }, userId }),
+                      })
+                      if (res.ok) {
+                        setOriginalSettings(prev => ({ ...prev, googleSheetsAutoSync: newValue }))
+                        addNotification(checked ? 'Auto-sync diaktifkan' : 'Auto-sync dinonaktifkan', 'success')
+                      }
+                    } catch {
+                      addNotification('Gagal mengubah auto-sync', 'error')
+                    }
+                  }}
+                />
+              </div>
+
+              {/* Manual sync buttons */}
+              {sheetsStatus?.connected && (
+                <>
+                  <Separator />
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">Sinkronisasi Manual</p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 text-xs"
+                        disabled={syncingAsn}
+                        onClick={async () => {
+                          setSyncingAsn(true)
+                          try {
+                            const res = await fetch('/api/google-sheets', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ action: 'sync-asn' }),
+                            })
+                            const data = await res.json()
+                            if (res.ok && data.success) {
+                              addNotification(data.message, 'success')
+                            } else {
+                              addNotification(data.error || 'Gagal sinkronisasi', 'error')
+                            }
+                          } catch {
+                            addNotification('Gagal sinkronisasi ASN ke Sheets', 'error')
+                          } finally {
+                            setSyncingAsn(false)
+                          }
+                        }}
+                      >
+                        {syncingAsn ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+                        Sync Data ASN
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Info about Service Account */}
+              <div className="flex items-start gap-2 rounded-lg border border-muted bg-muted/30 p-2.5">
+                <AlertCircle className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />
+                <p className="text-[11px] text-muted-foreground">
+                  Google Sheets menggunakan Service Account yang sama dengan Google Drive. Pastikan Google Drive API dan Google Sheets API sudah diaktifkan di Google Cloud Console, dan spreadsheet sudah dibagikan ke email Service Account.
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -1440,8 +1602,10 @@ export default function AdminSettings() {
                 <div className="sm:col-span-2">
                   <span className="text-white/40 block mb-0.5">Google Sheets</span>
                   <span className="text-white/90 flex items-center gap-1.5">
-                    {settings.googleSheetsSpreadsheetId ? (
-                      <><Table2 className="w-3.5 h-3.5 text-emerald-400" /> Dikonfigurasi</>
+                    {sheetsStatus?.connected ? (
+                      <><Table2 className="w-3.5 h-3.5 text-emerald-400" /> Terhubung - {sheetsStatus.spreadsheet?.title}</>
+                    ) : sheetsStatus?.configured ? (
+                      <><CloudOff className="w-3.5 h-3.5 text-red-400" /> Tidak terhubung</>
                     ) : (
                       <><Table2 className="w-3.5 h-3.5 text-white/40" /> Belum dikonfigurasi</>
                     )}

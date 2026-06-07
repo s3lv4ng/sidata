@@ -917,17 +917,11 @@ export default function SetupWizard() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="space-y-2">
-                <div className="flex items-center gap-1.5">
-                  <Key className="w-3 h-3 text-muted-foreground" />
-                  <Label className="text-sm">API Key</Label>
-                </div>
-                <Input
-                  placeholder="AIzaSy..."
-                  value={googleSheetsApiKey}
-                  onChange={(e) => setGoogleSheetsApiKey(e.target.value)}
-                  className="text-sm"
-                />
+              <div className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50/50 p-2.5 dark:border-blue-800 dark:bg-blue-900/10">
+                <AlertCircle className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                <p className="text-[11px] text-blue-700 dark:text-blue-300">
+                  Google Sheets menggunakan Service Account yang sama dengan Google Drive. Pastikan spreadsheet sudah dibagikan ke email Service Account.
+                </p>
               </div>
               <div className="space-y-2">
                 <div className="flex items-center gap-1.5">
@@ -1111,7 +1105,7 @@ export default function SetupWizard() {
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">Google Integration</span>
             <span className="font-medium text-foreground">
-              {skipGoogleIntegration ? 'Dilewati' : (googleDriveClientEmail || googleSheetsApiKey) ? 'Dikonfigurasi' : 'Tidak ada'}
+              {skipGoogleIntegration ? 'Dilewati' : (googleDriveClientEmail || googleSheetsSpreadsheetId) ? 'Dikonfigurasi' : 'Tidak ada'}
             </span>
           </div>
         </div>

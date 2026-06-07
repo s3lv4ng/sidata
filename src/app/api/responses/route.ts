@@ -35,7 +35,10 @@ export async function POST(request: NextRequest) {
     const { formId, userId, fields } = body;
 
     // Check if form is still active and not past deadline
-    const form = await db.form.findUnique({ where: { id: formId } });
+    const form = await db.form.findUnique({
+      where: { id: formId },
+      include: { fields: { orderBy: { order: 'asc' } } },
+    });
     if (!form) {
       return NextResponse.json({ error: "Form tidak ditemukan" }, { status: 404 });
     }
@@ -49,6 +52,12 @@ export async function POST(request: NextRequest) {
     // Check if response already exists
     const existingResponse = await db.formResponse.findUnique({
       where: { formId_userId: { formId, userId } },
+    });
+
+    // Get user info for auto-sync
+    const user = await db.user.findUnique({
+      where: { id: userId },
+      select: { nip: true, name: true, bidang: true, jabatan: true },
     });
 
     let response;
@@ -71,7 +80,7 @@ export async function POST(request: NextRequest) {
             })),
           },
         },
-        include: { fields: true },
+        include: { fields: { include: { field: true } } },
       });
 
       // Log activity
@@ -99,7 +108,7 @@ export async function POST(request: NextRequest) {
             })),
           },
         },
-        include: { fields: true },
+        include: { fields: { include: { field: true } } },
       });
 
       // Log activity
@@ -110,6 +119,41 @@ export async function POST(request: NextRequest) {
           details: `Mengisi form: ${form.title}`,
         },
       });
+    }
+
+    // Auto-sync to Google Sheets (non-blocking)
+    try {
+      const autoSyncSetting = await db.systemSetting.findUnique({
+        where: { key: 'googleSheetsAutoSync' },
+      });
+
+      if (autoSyncSetting?.value === 'true' && user) {
+        // Dynamically import to avoid issues
+        const { appendFormResponse } = await import('@/lib/google-sheets')
+
+        // Build field data for sync
+        const fieldData = fields.map((field: any) => {
+          const formField = form.fields.find((f) => f.id === field.fieldId)
+          return {
+            label: formField?.label || '',
+            value: field.value || '',
+          }
+        })
+
+        // Don't await - fire and forget
+        appendFormResponse(formId, {
+          nip: user.nip,
+          name: user.name,
+          bidang: user.bidang || '',
+          jabatan: user.jabatan || '',
+          submittedAt: new Date(),
+          fields: fieldData,
+        }).catch((err: any) => {
+          console.error('Auto-sync to Sheets failed (non-blocking):', err?.message || err)
+        })
+      }
+    } catch {
+      // Auto-sync is optional, don't block the response
     }
 
     return NextResponse.json(response, { status: existingResponse ? 200 : 201 });
