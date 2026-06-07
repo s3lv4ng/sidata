@@ -305,3 +305,37 @@ Stage Summary:
   - Auto-sync on form submit: WORKING ✅
 - All lint passes (only pre-existing custom-server.js warnings)
 - Verified with agent-browser: both tabs show correct status
+
+---
+Task ID: 6
+Agent: main
+Task: Fix Google Drive upload - files not uploading on form submission
+
+Work Log:
+- Investigated full upload flow: FormFiller → /api/upload → uploadToDrive()
+- Root cause: Service Accounts have 0 storage quota in "My Drive" folders
+- Error: "Service Accounts do not have storage quota. Leverage shared drives..."
+- Tried creating Shared Drive via API: failed - "The authenticated user cannot create new shared drives"
+- Tried domain-wide delegation (delegate email): requires Google Workspace admin to enable
+- Implemented multiple solutions:
+  1. Added "Email Delegasi" field to Drive settings (for domain-wide delegation)
+  2. Added "Test Upload" button that actually uploads a test file
+  3. Added "Upload Terbatas" badge when folder is in My Drive
+  4. Added detailed troubleshooting with 2 solutions:
+     - Solusi 1: Email Delegasi (domain-wide delegation)
+     - Solusi 2: Create Shared Drive manually
+  5. Updated google-drive.ts with delegate email support
+  6. Auto-detects folder type (My Drive vs Shared Drive) via driveId check
+  7. canUpload flag considers both folder type and delegate email presence
+- Updated /api/drive route to support test-upload action
+- Updated AdminSettings with new buttons, warnings, and delegate email field
+
+Stage Summary:
+- Google Drive CONNECTION works ✅ (folder readable, file listing works)
+- Google Drive UPLOAD requires one of:
+  - Shared Drive (Drive Bersama) - user must create manually
+  - Domain-wide delegation - admin must enable in Google Workspace
+- UI clearly shows "Upload Terbatas" warning with solutions
+- Test Upload button lets user verify when their setup works
+- All lint passes (only pre-existing custom-server.js warnings)
+- Verified with agent-browser: Drive tab shows correct status, Test Upload button, and solution instructions

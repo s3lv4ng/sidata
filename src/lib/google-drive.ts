@@ -7,6 +7,7 @@ interface DriveConfig {
   clientEmail: string
   privateKey: string
   folderId: string
+  delegateEmail?: string // For domain-wide delegation
 }
 
 // Error type for detailed Google API errors
@@ -26,74 +27,58 @@ function parseDriveError(error: any): DriveError {
   const errMsg = error?.message || String(error)
   const code = error?.code || error?.response?.status
 
-  // Check for specific error patterns
   if (errMsg.includes('has not been used') || errMsg.includes('is disabled') || errMsg.includes('SERVICE_DISABLED')) {
     return {
       message: 'Google Drive API belum diaktifkan di project Google Cloud Anda. Aktifkan di Google Cloud Console → APIs & Services → Library → Google Drive API.',
-      code,
-      reason: 'SERVICE_DISABLED',
-      isApiDisabled: true,
+      code, reason: 'SERVICE_DISABLED', isApiDisabled: true,
     }
   }
 
   if (errMsg.includes('invalid_grant') || errMsg.includes('Invalid JWT') || errMsg.includes('invalid_client')) {
     return {
       message: 'Kredensial Service Account tidak valid. Periksa kembali Service Account Email dan Private Key.',
-      code,
-      reason: 'INVALID_CREDENTIALS',
-      isAuthError: true,
+      code, reason: 'INVALID_CREDENTIALS', isAuthError: true,
     }
   }
 
   if (errMsg.includes('File not found') || errMsg.includes('notFound')) {
     return {
       message: 'Folder ID tidak ditemukan. Pastikan Folder ID benar dan folder sudah dibagikan ke Service Account.',
-      code,
-      reason: 'NOT_FOUND',
-      isNotFoundError: true,
+      code, reason: 'NOT_FOUND', isNotFoundError: true,
     }
   }
 
   if (errMsg.includes('insufficientPermissions') || errMsg.includes('forbidden') || errMsg.includes('ACCESS_DENIED')) {
     return {
       message: 'Service Account tidak memiliki akses ke folder. Bagikan folder ke email Service Account dengan akses Editor.',
-      code,
-      reason: 'PERMISSION_DENIED',
-      isPermissionError: true,
+      code, reason: 'PERMISSION_DENIED', isPermissionError: true,
     }
   }
 
   if (errMsg.includes('unregistered') || errMsg.includes('unregistered callers')) {
     return {
       message: 'Google Drive API belum diaktifkan di project Anda. Aktifkan di Google Cloud Console → APIs & Services.',
-      code,
-      reason: 'API_NOT_ENABLED',
-      isApiDisabled: true,
+      code, reason: 'API_NOT_ENABLED', isApiDisabled: true,
     }
   }
 
   if (errMsg.includes('storage quota') || errMsg.includes('Storage quota exceeded') || errMsg.includes('do not have storage quota')) {
     return {
-      message: 'Service Account tidak memiliki kuota penyimpanan. Gunakan Shared Drive (Drive Bersama) sebagai folder target, atau aktifkan domain-wide delegation di Google Cloud Console.',
-      code,
-      reason: 'STORAGE_QUOTA',
-      isQuotaError: true,
+      message: 'Service Account tidak memiliki kuota penyimpanan. Gunakan Shared Drive (Drive Bersama) atau aktifkan Domain-Wide Delegation dengan Email Delegasi.',
+      code, reason: 'STORAGE_QUOTA', isQuotaError: true,
     }
   }
 
   if (errMsg.includes('ENOTFOUND') || errMsg.includes('ECONNREFUSED') || errMsg.includes('network')) {
     return {
       message: 'Tidak dapat terhubung ke server Google. Periksa koneksi internet.',
-      code,
-      reason: 'NETWORK_ERROR',
+      code, reason: 'NETWORK_ERROR',
     }
   }
 
-  // Generic error
   return {
     message: `Koneksi ke Google Drive gagal: ${errMsg}`,
-    code,
-    reason: 'UNKNOWN',
+    code, reason: 'UNKNOWN',
   }
 }
 
@@ -103,7 +88,7 @@ export async function getDriveConfig(): Promise<DriveConfig | null> {
     const settings = await db.systemSetting.findMany({
       where: {
         key: {
-          in: ['googleDriveClientEmail', 'googleDrivePrivateKey', 'googleDriveFolderId'],
+          in: ['googleDriveClientEmail', 'googleDrivePrivateKey', 'googleDriveFolderId', 'googleDriveDelegateEmail'],
         },
       },
     })
@@ -114,12 +99,13 @@ export async function getDriveConfig(): Promise<DriveConfig | null> {
     const clientEmail = settingsMap.googleDriveClientEmail
     const privateKey = settingsMap.googleDrivePrivateKey?.replace(/\\n/g, '\n')
     const folderId = settingsMap.googleDriveFolderId
+    const delegateEmail = settingsMap.googleDriveDelegateEmail
 
     if (!clientEmail || !privateKey || !folderId) {
       return null
     }
 
-    return { clientEmail, privateKey, folderId }
+    return { clientEmail, privateKey, folderId, delegateEmail: delegateEmail || undefined }
   } catch (error) {
     console.error('Error getting Drive config:', error)
     return null
@@ -132,20 +118,27 @@ export async function isDriveConfigured(): Promise<boolean> {
   return config !== null
 }
 
-// Create an authenticated Google Drive client using GoogleAuth (recommended approach)
+// Create an authenticated Google Drive client
+// If delegateEmail is set, uses domain-wide delegation to impersonate a real user
 function createDriveClient(config: DriveConfig) {
-  const auth = new google.auth.GoogleAuth({
+  const authConfig: any = {
     credentials: {
       client_email: config.clientEmail,
       private_key: config.privateKey,
     },
     scopes: ['https://www.googleapis.com/auth/drive'],
-  })
+  }
 
+  // If delegate email is set, impersonate that user (domain-wide delegation)
+  if (config.delegateEmail) {
+    authConfig.subject = config.delegateEmail
+  }
+
+  const auth = new google.auth.GoogleAuth(authConfig)
   return google.drive({ version: 'v3', auth })
 }
 
-// Upload a file to Google Drive (supports Shared Drives)
+// Upload a file to Google Drive (supports Shared Drives and domain-wide delegation)
 export async function uploadToDrive(
   fileBuffer: Buffer,
   fileName: string,
@@ -162,13 +155,13 @@ export async function uploadToDrive(
     const drive = createDriveClient(config)
     const targetFolderId = folderId || config.folderId
 
-    // Create a unique filename with timestamp to avoid conflicts
+    // Create a unique filename with timestamp
     const timestamp = Date.now()
     const ext = fileName.includes('.') ? '.' + fileName.split('.').pop() : ''
     const baseName = fileName.includes('.') ? fileName.slice(0, fileName.lastIndexOf('.')) : fileName
     const uniqueFileName = `${baseName}_${timestamp}${ext}`
 
-    // Convert Buffer to Readable stream (Google Drive API requires a stream)
+    // Convert Buffer to Readable stream
     const readableStream = Readable.from(fileBuffer)
 
     const response = await drive.files.create({
@@ -200,8 +193,6 @@ export async function uploadToDrive(
         supportsAllDrives: true,
       })
     } catch (permError: any) {
-      // Permission setting failed - file is uploaded but not publicly accessible
-      // This is not critical, the file still exists in Drive
       console.warn('Could not set public permission on Drive file:', permError?.message)
     }
 
@@ -255,21 +246,25 @@ export async function listDriveFiles(maxResults: number = 10): Promise<any[] | n
 }
 
 // Get folder info - returns folder data or throws with detailed error
-export async function getFolderInfo(): Promise<{ name: string; id: string }> {
+export async function getFolderInfo(): Promise<{ name: string; id: string; driveId?: string }> {
   const config = await getDriveConfig()
   if (!config) throw new Error('Google Drive belum dikonfigurasi')
 
   const drive = createDriveClient(config)
   const response = await drive.files.get({
     fileId: config.folderId,
-    fields: 'id, name',
+    fields: 'id, name, driveId',
     supportsAllDrives: true,
   })
 
-  return response.data as { name: string; id: string }
+  return {
+    name: response.data.name || '',
+    id: response.data.id || config.folderId,
+    driveId: response.data.driveId || undefined,
+  }
 }
 
-// Test connection - also tests if upload is possible by checking folder type
+// Test connection - also tests if upload is possible
 export async function testDriveConnection(): Promise<{
   configured: boolean
   connected: boolean
@@ -290,39 +285,24 @@ export async function testDriveConnection(): Promise<{
       }
     }
 
-    // Try to get folder info to verify connection
     try {
       const folderInfo = await getFolderInfo()
-
-      // List recent files
       const files = await listDriveFiles(10)
 
-      // Check if folder is in a Shared Drive by trying to get more details
+      // Check if folder is in a Shared Drive or if delegation is configured
       let canUpload = true
       let uploadWarning: string | undefined
 
-      try {
-        const drive = createDriveClient(config)
-        const folderDetail = await drive.files.get({
-          fileId: config.folderId,
-          fields: 'id, name, driveId',
-          supportsAllDrives: true,
-        })
-
-        // If driveId exists, it's in a Shared Drive - upload should work
-        // If no driveId, it's in My Drive - upload may fail due to Service Account quota
-        if (!folderDetail.data.driveId) {
-          canUpload = false
-          uploadWarning = 'Folder ini berada di "My Drive" (Drive Pribadi), bukan Shared Drive. Upload file oleh Service Account mungkin gagal karena Service Account tidak memiliki kuota penyimpanan. Gunakan Shared Drive (Drive Bersama) untuk mengatasi masalah ini.'
-        }
-      } catch {
-        // Can't determine folder type, assume it works
+      if (!folderInfo.driveId && !config.delegateEmail) {
+        // Folder is in My Drive and no delegation configured
+        canUpload = false
+        uploadWarning = 'Folder ini berada di "My Drive" (Drive Pribadi), bukan Shared Drive. Upload file oleh Service Account akan gagal karena tidak memiliki kuota penyimpanan. Solusi: (1) Gunakan Shared Drive/Drive Bersama, atau (2) Atur Email Delegasi untuk domain-wide delegation.'
       }
 
       return {
         configured: true,
         connected: true,
-        folder: folderInfo,
+        folder: { name: folderInfo.name, id: folderInfo.id },
         files: files || [],
         canUpload,
         uploadWarning,
@@ -343,6 +323,98 @@ export async function testDriveConnection(): Promise<{
       connected: false,
       error: parseDriveError(error),
       message: `Error: ${error.message || 'Koneksi gagal'}`,
+    }
+  }
+}
+
+// Create a Shared Drive and folder for file uploads
+export async function createSharedDriveForUpload(): Promise<{
+  success: boolean
+  message: string
+  driveId?: string
+  driveName?: string
+  folderId?: string
+  folderName?: string
+}> {
+  try {
+    const settings = await db.systemSetting.findMany({
+      where: {
+        key: {
+          in: ['googleDriveClientEmail', 'googleDrivePrivateKey'],
+        },
+      },
+    })
+
+    const settingsMap: Record<string, string> = {}
+    settings.forEach((s) => (settingsMap[s.key] = s.value))
+
+    const clientEmail = settingsMap.googleDriveClientEmail
+    const privateKey = settingsMap.googleDrivePrivateKey?.replace(/\\n/g, '\n')
+
+    if (!clientEmail || !privateKey) {
+      return { success: false, message: 'Service Account belum dikonfigurasi' }
+    }
+
+    const auth = new google.auth.GoogleAuth({
+      credentials: {
+        client_email: clientEmail,
+        private_key: privateKey,
+      },
+      scopes: ['https://www.googleapis.com/auth/drive'],
+    })
+    const drive = google.drive({ version: 'v3', auth })
+
+    // Create a Shared Drive
+    const requestId = `sidata-bkad-${Date.now()}`
+    const driveName = 'SIDATA BKAD Drive'
+
+    const driveResponse = await drive.drives.create({
+      requestId,
+      requestBody: { name: driveName },
+    })
+
+    const newDriveId = driveResponse.data.id
+    if (!newDriveId) {
+      return { success: false, message: 'Gagal membuat Shared Drive - tidak ada ID yang dikembalikan' }
+    }
+
+    // Create a folder inside the Shared Drive
+    const folderName = 'Upload SIDATA'
+    const folderResponse = await drive.files.create({
+      requestBody: {
+        name: folderName,
+        mimeType: 'application/vnd.google-apps.folder',
+        parents: [newDriveId],
+      },
+      fields: 'id, name, webViewLink',
+      supportsAllDrives: true,
+    })
+
+    const newFolderId = folderResponse.data.id
+    if (!newFolderId) {
+      return { success: false, message: 'Gagal membuat folder di Shared Drive' }
+    }
+
+    // Update the folder ID in settings
+    await db.systemSetting.upsert({
+      where: { key: 'googleDriveFolderId' },
+      update: { value: newFolderId },
+      create: { key: 'googleDriveFolderId', value: newFolderId },
+    })
+
+    return {
+      success: true,
+      message: `Shared Drive "${driveName}" dan folder "${folderName}" berhasil dibuat. Folder ID diperbarui otomatis.`,
+      driveId: newDriveId,
+      driveName,
+      folderId: newFolderId,
+      folderName,
+    }
+  } catch (error: any) {
+    const errMsg = error?.message || String(error)
+    return {
+      success: false,
+      message: `Gagal membuat Shared Drive secara otomatis. Anda perlu membuatnya manual: buka Google Drive → Shared Drives → Buat baru → tambahkan Service Account sebagai Content Manager → buat folder → copy Folder ID ke pengaturan. Error: ${errMsg}`,
     }
   }
 }

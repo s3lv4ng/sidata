@@ -142,6 +142,15 @@ const driveSettingsConfig = [
     type: 'input' as const,
     sensitive: false,
   },
+  {
+    key: 'googleDriveDelegateEmail',
+    label: 'Email Delegasi (Opsional)',
+    placeholder: 'admin@instansi.go.id',
+    description: 'Email pengguna yang akan diimpersonasi (domain-wide delegation). Diperlukan jika folder di My Drive dan Service Account tidak bisa upload langsung.',
+    icon: UserCog,
+    type: 'input' as const,
+    sensitive: false,
+  },
 ]
 
 export default function AdminSettings() {
@@ -176,6 +185,7 @@ export default function AdminSettings() {
     }
   } | null>(null)
   const [testingDrive, setTestingDrive] = useState(false)
+  const [testingDriveUpload, setTestingDriveUpload] = useState(false)
   const [driveFilesDialogOpen, setDriveFilesDialogOpen] = useState(false)
   const [showDriveCredentials, setShowDriveCredentials] = useState(false)
   const [showGoogleClientSecret, setShowGoogleClientSecret] = useState(false)
@@ -201,6 +211,7 @@ export default function AdminSettings() {
   } | null>(null)
   const [testingSheets, setTestingSheets] = useState(false)
   const [syncingAsn, setSyncingAsn] = useState(false)
+  const [creatingSharedDrive, setCreatingSharedDrive] = useState(false)
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -951,6 +962,42 @@ export default function AdminSettings() {
                     <RefreshCw className={`w-3 h-3 ${testingDrive ? 'animate-spin' : ''}`} />
                     Tes Koneksi
                   </Button>
+                  {driveStatus && driveStatus.connected && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        setTestingDriveUpload(true)
+                        try {
+                          const res = await fetch('/api/drive', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'test-upload' }),
+                          })
+                          const data = await res.json()
+                          if (data.success) {
+                            addNotification('✅ Upload ke Google Drive berhasil!', 'success')
+                            // Recheck status since upload might have confirmed it works
+                            await checkDriveStatus()
+                          } else {
+                            addNotification('❌ Upload gagal: ' + (data.message || 'Folder mungkin di My Drive'), 'error')
+                          }
+                        } catch {
+                          addNotification('Gagal test upload ke Drive', 'error')
+                        } finally {
+                          setTestingDriveUpload(false)
+                        }
+                      }}
+                      disabled={testingDriveUpload}
+                      className="h-7 gap-1.5 text-xs"
+                    >
+                      {testingDriveUpload ? (
+                        <><Loader2 className="w-3 h-3 animate-spin" /> Testing...</>
+                      ) : (
+                        <><Upload className="w-3 h-3" /> Test Upload</>
+                      )}
+                    </Button>
+                  )}
                 </div>
               </div>
             </CardHeader>
@@ -982,18 +1029,25 @@ export default function AdminSettings() {
                   {driveStatus.uploadWarning && (
                     <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50/50 p-3 dark:border-amber-800 dark:bg-amber-900/10">
                       <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                      <div className="text-xs text-amber-700 dark:text-amber-300 space-y-1.5">
+                      <div className="text-xs text-amber-700 dark:text-amber-300 space-y-2 flex-1">
                         <p className="font-medium">Upload File ke Google Drive Terbatas</p>
                         <p>{driveStatus.uploadWarning}</p>
-                        <p className="font-medium mt-2">Cara Menggunakan Shared Drive:</p>
-                        <ol className="list-decimal list-inside space-y-0.5">
-                          <li>Buka Google Drive</li>
-                          <li>Klik <strong>Drive Bersama/Shared Drives</strong> di sidebar kiri</li>
-                          <li>Buat Drive Bersama baru atau gunakan yang sudah ada</li>
-                          <li>Tambahkan Service Account <code className="bg-amber-100 dark:bg-amber-900/50 px-1 rounded">{settings.googleDriveClientEmail || 'email-sa'}</code> sebagai <strong>Content Manager</strong></li>
-                          <li>Buat folder di dalam Drive Bersama tersebut</li>
-                          <li>Copy Folder ID dari URL dan update di pengaturan</li>
-                        </ol>
+                        <div className="space-y-1.5 mt-2">
+                          <p className="font-medium">Solusi 1: Email Delegasi (Direkomendasikan)</p>
+                          <p>Isi field <strong>Email Delegasi</strong> di bawah dengan email pengguna Google Workspace yang memiliki akses ke folder. Service Account akan mengunggah file atas nama pengguna tersebut.</p>
+                          <p className="text-[11px] text-amber-600/80 dark:text-amber-400/80">Catatan: Memerlukan domain-wide delegation yang diaktifkan di Google Workspace Admin Console.</p>
+                        </div>
+                        <div className="space-y-1.5 mt-2">
+                          <p className="font-medium">Solusi 2: Buat Shared Drive Manual</p>
+                          <ol className="list-decimal list-inside space-y-0.5">
+                            <li>Buka Google Drive</li>
+                            <li>Klik <strong>Drive Bersama/Shared Drives</strong> di sidebar kiri</li>
+                            <li>Buat Drive Bersama baru</li>
+                            <li>Tambahkan Service Account <code className="bg-amber-100 dark:bg-amber-900/50 px-1 rounded">{settings.googleDriveClientEmail || 'email-sa'}</code> sebagai <strong>Content Manager</strong></li>
+                            <li>Buat folder di dalam Drive Bersama tersebut</li>
+                            <li>Copy Folder ID dari URL dan update di pengaturan</li>
+                          </ol>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -1198,6 +1252,16 @@ export default function AdminSettings() {
                           <p className="text-[11px] text-muted-foreground">
                             Dapatkan dari URL folder: drive.google.com/drive/folders/<strong className="text-foreground">FOLDER_ID</strong>
                           </p>
+                        )}
+                        {config.key === 'googleDriveDelegateEmail' && (
+                          <div className="space-y-1">
+                            <p className="text-[11px] text-muted-foreground">
+                              Email pengguna Google Workspace yang memiliki akses ke folder. Service Account akan mengunggah file atas nama pengguna ini.
+                            </p>
+                            <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                              Memerlukan domain-wide delegation di Google Workspace Admin Console → Security → API Controls → Domain-wide Delegation.
+                            </p>
+                          </div>
                         )}
                       </div>
                       <Button
