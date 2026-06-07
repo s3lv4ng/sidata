@@ -288,6 +288,8 @@ export async function POST() {
         { key: "loginWithNip", value: "true" },
         { key: "loginWithGoogle", value: "false" },
         { key: "showPasswordLogin", value: "true" },
+        { key: "setupCompleted", value: "true" },
+        { key: "setupCompletedAt", value: new Date().toISOString() },
       ],
     });
 

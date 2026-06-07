@@ -2,6 +2,7 @@ import { create } from "zustand";
 
 export type AppView = 
   | "login"
+  | "setup-wizard"
   | "asn-home"
   | "asn-form-fill"
   | "asn-profile"

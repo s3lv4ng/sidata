@@ -1,9 +1,10 @@
 'use client'
 
 import { SessionProvider, useSession } from 'next-auth/react'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useAppStore, AppView } from '@/stores/app-store'
 import LoginForm from '@/components/auth/LoginForm'
+import SetupWizard from '@/components/setup/SetupWizard'
 import ASNHomepage from '@/components/asn/ASNHomepage'
 import FormFiller from '@/components/asn/FormFiller'
 import ASNProfile from '@/components/asn/ASNProfile'
@@ -24,20 +25,59 @@ import HelpFAQ from '@/components/shared/HelpFAQ'
 function AppContent() {
   const { data: session, status } = useSession()
   const { currentView, setCurrentView } = useAppStore()
+  // Wait for initial setup check before rendering any view
+  const [initDone, setInitDone] = useState(false)
 
   useEffect(() => {
     if (status === 'loading') return
+    if (initDone) return
+
+    // If already on setup wizard, mark init done
+    if (currentView === 'setup-wizard') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setInitDone(true)
+      return
+    }
+
     if (session?.user) {
       const role = (session.user as any).role
-      if (currentView === 'login') {
-        setCurrentView(role === 'ADMIN' ? 'admin-dashboard' : 'asn-home')
-      }
-    } else {
-      setCurrentView('login')
+      setCurrentView(role === 'ADMIN' ? 'admin-dashboard' : 'asn-home')
+      setInitDone(true)
+      return
     }
-  }, [session, status, currentView, setCurrentView])
 
-  if (status === 'loading') {
+    // Not logged in - check setup status first
+    let cancelled = false
+    const checkSetup = async () => {
+      try {
+        const res = await fetch('/api/setup')
+        if (res.ok && !cancelled) {
+          const data = await res.json()
+          if (!data.setupCompleted) {
+            setCurrentView('setup-wizard')
+            setInitDone(true)
+            return
+          }
+        }
+      } catch {
+        // Continue to login on error
+      }
+      if (!cancelled) {
+        setCurrentView('login')
+        setInitDone(true)
+      }
+    }
+    checkSetup()
+    return () => { cancelled = true }
+  }, [status, session, currentView, setCurrentView, initDone])
+
+  // Show setup wizard
+  if (currentView === 'setup-wizard') {
+    return <SetupWizard />
+  }
+
+  // Don't render anything until we know whether to show login or wizard
+  if (!initDone || status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">

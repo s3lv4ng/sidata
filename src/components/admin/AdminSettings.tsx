@@ -44,6 +44,7 @@ import {
   EyeOff,
   Table2,
   Upload,
+  Sparkles,
 } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 
@@ -1046,6 +1047,44 @@ export default function AdminSettings() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Setup Wizard Card */}
+      <Card className="border-border/60">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+            <Sparkles className="w-4 h-4" />
+            Setup Wizard
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-xs text-muted-foreground">
+            Jalankan kembali Setup Wizard untuk mengkonfigurasi ulang sistem dari awal. Ini akan mengatur ulang status setup tetapi tidak menghapus data yang sudah ada.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={async () => {
+              try {
+                await fetch('/api/settings', {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    settings: { setupCompleted: 'false' },
+                    userId,
+                  }),
+                })
+                addNotification('Setup Wizard akan ditampilkan saat login berikutnya', 'success')
+              } catch {
+                addNotification('Gagal mengatur ulang setup', 'error')
+              }
+            }}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            Jalankan Setup Wizard
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   )
 }

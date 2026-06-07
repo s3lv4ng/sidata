@@ -28,13 +28,17 @@ export async function PUT(request: NextRequest) {
     }
 
     if (userId) {
-      await db.activityLog.create({
-        data: {
-          userId,
-          action: "UPDATE_SETTINGS",
-          details: "Mengubah pengaturan sistem",
-        },
-      });
+      try {
+        await db.activityLog.create({
+          data: {
+            userId,
+            action: "UPDATE_SETTINGS",
+            details: "Mengubah pengaturan sistem",
+          },
+        });
+      } catch {
+        // Skip activity log if userId is invalid
+      }
     }
 
     return NextResponse.json({ message: "Pengaturan berhasil disimpan" });
