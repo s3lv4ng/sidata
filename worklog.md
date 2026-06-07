@@ -637,3 +637,75 @@ Stage Summary:
 - Application works correctly when tested via API
 - Note: Browser testing shows the standalone server gets killed during Chrome-initiated login due to sandbox resource constraints, but this is a sandbox limitation, not a code issue
 
+---
+Task ID: phase-5
+Agent: Main Agent
+Task: Implement Google Drive integration for file uploads
+
+Work Log:
+- Investigated current project state: no /api/upload route existed, no Google Drive integration
+- Installed `googleapis` npm package for Google Drive API
+- Updated Prisma schema: added `driveFileId` (String?) and `driveLink` (String?) to FieldResponse model
+- Ran `bun run db:push` to sync schema with database
+- Created `/home/z/my-project/src/lib/google-drive.ts`: Google Drive service module with:
+  - `getDriveConfig()`: Reads Service Account credentials from SystemSetting table
+  - `isDriveConfigured()`: Checks if Drive is set up
+  - `uploadToDrive()`: Uploads file buffer to Google Drive, returns fileId and webViewLink
+  - `deleteFromDrive()`: Deletes a file from Drive
+  - `listDriveFiles()`: Lists files in configured folder
+  - `getFolderInfo()`: Gets folder metadata
+  - Uses JWT auth with Service Account (googleapis library)
+  - Makes uploaded files publicly readable via `anyone` permission
+- Created `/home/z/my-project/src/app/api/upload/route.ts`: File upload API route
+  - Saves file locally to /upload directory with unique filename
+  - Attempts Google Drive upload (non-blocking - continues if Drive fails)
+  - Returns fileName, filePath, driveFileId, driveLink, driveUploaded status
+  - Validates file size (max 10MB)
+  - Uses dynamic import for google-drive module to avoid Turbopack compile issues
+- Created `/home/z/my-project/src/app/api/file/route.ts`: File serving API route
+  - Serves uploaded files from local /upload directory
+  - Content-type detection based on file extension
+  - Security: only allows paths starting with /upload/
+- Created `/home/z/my-project/src/app/api/drive/route.ts`: Drive status API route
+  - GET endpoint checks Drive configuration status
+  - Tests connection by getting folder info
+  - Lists recent files in the folder
+  - Uses dynamic import for google-drive module
+- Updated `/home/z/my-project/src/app/api/responses/route.ts`: Added driveFileId and driveLink to field response creation
+- Updated `/home/z/my-project/src/components/asn/FormFiller.tsx`:
+  - Added driveFileId and driveLink to FieldAnswer interface
+  - Updated uploadedFiles state to include driveLink and driveUploaded
+  - Handles Drive upload response from /api/upload
+  - Shows Google Drive icon and link for uploaded files
+  - Shows "Tersimpan di Google Drive" confirmation badge
+  - Passes driveFileId and driveLink when submitting form responses
+- Updated `/home/z/my-project/src/components/admin/AdminSettings.tsx`: Complete rewrite with Google Drive section
+  - Added Google Drive Integration section with 3 config fields:
+    - Service Account Email (googleDriveClientEmail)
+    - Private Key (googleDrivePrivateKey) - masked display, clear on focus
+    - Folder ID (googleDriveFolderId) - with URL extraction hint
+  - Drive connection status badge (Terhubung/Gagal/Belum Dikonfigurasi)
+  - "Tes Koneksi" button to verify Drive connection
+  - Step-by-step setup guide for Google Cloud Console
+  - "Lihat File" dialog showing recent files in Drive folder
+  - Google Drive status shown in preview card
+  - Sensitive field handling (masked values, don't send masked values back)
+- Updated `/home/z/my-project/src/components/admin/AdminResponses.tsx`:
+  - Added driveFileId and driveLink to FieldResponseItem interface
+  - Added ExternalLink and HardDrive icon imports
+  - Shows "Buka di Google Drive" link for file uploads that have driveLink
+  - Green-colored Drive link with HardDrive icon
+
+Stage Summary:
+- Google Drive integration fully implemented end-to-end
+- File uploads now save locally AND to Google Drive (if configured)
+- Drive upload is non-blocking - local upload succeeds even if Drive fails
+- Admin can configure Drive credentials in Settings page
+- Drive connection can be tested from Settings page
+- ASN users see Drive confirmation when files are uploaded
+- Admin can see Drive links in response details
+- All new API endpoints: /api/upload, /api/file, /api/drive
+- Prisma schema updated with driveFileId and driveLink fields
+- Build compiles successfully (0 errors excluding pre-existing custom-server.js)
+- All API endpoints verified working via curl
+

@@ -77,13 +77,15 @@ model FormResponse {
 }
 
 model FieldResponse {
-  id         String   @id @default(cuid())
-  responseId String
-  fieldId    String
-  value      String?  // The answer value
-  fileName   String?  // For file uploads - original filename
-  filePath   String?  // For file uploads - stored path
-  createdAt  DateTime @default(now())
+  id          String   @id @default(cuid())
+  responseId  String
+  fieldId     String
+  value       String?  // The answer value
+  fileName    String?  // For file uploads - original filename
+  filePath    String?  // For file uploads - stored path
+  driveFileId String?  // Google Drive file ID
+  driveLink   String?  // Google Drive web link
+  createdAt   DateTime @default(now())
 
   response FormResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
   field    FormField    @relation(fields: [fieldId], references: [id])

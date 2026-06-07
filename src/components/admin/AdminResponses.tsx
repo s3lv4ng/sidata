@@ -58,6 +58,8 @@ import {
   Users,
   FileText,
   Paperclip,
+  ExternalLink,
+  HardDrive,
   BarChart3,
   TrendingUp,
 } from 'lucide-react'
@@ -75,6 +77,8 @@ interface FieldResponseItem {
   value: string | null
   fileName: string | null
   filePath: string | null
+  driveFileId: string | null
+  driveLink: string | null
   field: {
     id: string
     label: string
@@ -1065,16 +1069,32 @@ export default function AdminResponses() {
 
                         {isFileField ? (
                           hasFile ? (
-                            <div className="flex items-center gap-2 mt-1">
-                              <Paperclip className="w-3.5 h-3.5 text-muted-foreground" />
-                              <a
-                                href={fieldResp.filePath}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-sm text-blue-600 hover:underline"
-                              >
-                                {fieldResp.fileName || 'Unduh File'}
-                              </a>
+                            <div className="space-y-1.5 mt-1">
+                              <div className="flex items-center gap-2">
+                                <Paperclip className="w-3.5 h-3.5 text-muted-foreground" />
+                                <a
+                                  href={fieldResp.filePath}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-sm text-blue-600 hover:underline"
+                                >
+                                  {fieldResp.fileName || 'Unduh File'}
+                                </a>
+                              </div>
+                              {fieldResp?.driveLink && (
+                                <div className="flex items-center gap-2 pl-5">
+                                  <a
+                                    href={fieldResp.driveLink}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
+                                  >
+                                    <HardDrive className="w-3 h-3" />
+                                    Buka di Google Drive
+                                    <ExternalLink className="w-2.5 h-2.5" />
+                                  </a>
+                                </div>
+                              )}
                             </div>
                           ) : (
                             <p className="text-sm text-muted-foreground mt-1">

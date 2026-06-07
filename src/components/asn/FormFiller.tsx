@@ -70,6 +70,8 @@ interface FieldAnswer {
   value: string
   fileName?: string
   filePath?: string
+  driveFileId?: string
+  driveLink?: string
 }
 
 export default function FormFiller() {
@@ -83,7 +85,7 @@ export default function FormFiller() {
   const [submitSuccess, setSubmitSuccess] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [uploadingFields, setUploadingFields] = useState<Set<string>>(new Set())
-  const [uploadedFiles, setUploadedFiles] = useState<Record<string, { name: string; path: string }>>({})
+  const [uploadedFiles, setUploadedFiles] = useState<Record<string, { name: string; path: string; driveLink?: string; driveUploaded?: boolean }>>({})
 
   const userId = (session?.user as any)?.id || ''
 
@@ -112,10 +114,15 @@ export default function FormFiller() {
           setAnswers(existingAnswers)
 
           // Set uploaded files info for existing file fields
-          const existingFiles: Record<string, { name: string; path: string }> = {}
+          const existingFiles: Record<string, { name: string; path: string; driveLink?: string; driveUploaded?: boolean }> = {}
           data.responses[0].fields.forEach((f) => {
             if (f.field.type === 'file_upload' && f.fileName && f.filePath) {
-              existingFiles[f.fieldId] = { name: f.fileName, path: f.filePath }
+              existingFiles[f.fieldId] = {
+                name: f.fileName,
+                path: f.filePath,
+                driveLink: (f as any).driveLink || undefined,
+                driveUploaded: !!(f as any).driveLink,
+              }
             }
           })
           setUploadedFiles(existingFiles)
@@ -160,12 +167,24 @@ export default function FormFiller() {
         const data = await res.json()
         setUploadedFiles((prev) => ({
           ...prev,
-          [fieldId]: { name: data.fileName, path: data.filePath },
+          [fieldId]: {
+            name: data.fileName,
+            path: data.filePath,
+            driveLink: data.driveLink || undefined,
+            driveUploaded: data.driveUploaded || false,
+          },
         }))
         setAnswers((prev) =>
           prev.map((a) =>
             a.fieldId === fieldId
-              ? { ...a, value: data.filePath, fileName: data.fileName, filePath: data.filePath }
+              ? {
+                  ...a,
+                  value: data.filePath,
+                  fileName: data.fileName,
+                  filePath: data.filePath,
+                  driveFileId: data.driveFileId || undefined,
+                  driveLink: data.driveLink || undefined,
+                }
               : a
           )
         )
@@ -216,6 +235,8 @@ export default function FormFiller() {
         value: a.value || null,
         fileName: a.fileName || null,
         filePath: a.filePath || null,
+        driveFileId: a.driveFileId || null,
+        driveLink: a.driveLink || null,
       }))
 
       const res = await fetch('/api/responses', {
@@ -555,20 +576,47 @@ export default function FormFiller() {
                     {field.type === 'file_upload' && (
                       <div className="space-y-2">
                         {uploadedFiles[field.id] ? (
-                          <div className="flex items-center gap-2 rounded-md border border-primary/20 bg-primary/5 p-3">
-                            <FileText className="w-4 h-4 text-primary shrink-0" />
-                            <span className="text-sm flex-1 truncate">
-                              {uploadedFiles[field.id].name}
-                            </span>
-                            {!isFormClosed && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 shrink-0"
-                                onClick={() => removeFile(field.id)}
-                              >
-                                <X className="w-3 h-3" />
-                              </Button>
+                          <div className="space-y-1.5">
+                            <div className="flex items-center gap-2 rounded-md border border-primary/20 bg-primary/5 p-3">
+                              <FileText className="w-4 h-4 text-primary shrink-0" />
+                              <span className="text-sm flex-1 truncate">
+                                {uploadedFiles[field.id].name}
+                              </span>
+                              {uploadedFiles[field.id].driveUploaded && (
+                                <a
+                                  href={uploadedFiles[field.id].driveLink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-xs text-emerald-600 hover:text-emerald-700 flex items-center gap-1 shrink-0"
+                                  title="Buka di Google Drive"
+                                >
+                                  <svg className="w-3.5 h-3.5" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>
+                                    <path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0-1.2 4.5h27.5z" fill="#00ac47"/>
+                                    <path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.5l5.4 13.8z" fill="#ea4335"/>
+                                    <path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/>
+                                    <path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/>
+                                    <path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/>
+                                  </svg>
+                                  Drive
+                                </a>
+                              )}
+                              {!isFormClosed && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 shrink-0"
+                                  onClick={() => removeFile(field.id)}
+                                >
+                                  <X className="w-3 h-3" />
+                                </Button>
+                              )}
+                            </div>
+                            {uploadedFiles[field.id].driveUploaded && (
+                              <p className="text-[11px] text-emerald-600 flex items-center gap-1 pl-1">
+                                <CheckCircle2 className="w-3 h-3" />
+                                Tersimpan di Google Drive
+                              </p>
                             )}
                           </div>
                         ) : (
