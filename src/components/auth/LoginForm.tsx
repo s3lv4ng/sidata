@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { signIn } from 'next-auth/react'
 import { useAppStore } from '@/stores/app-store'
+import { useAppBranding, useDynamicFavicon } from '@/hooks/use-app-branding'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -25,6 +26,8 @@ export default function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const setCurrentView = useAppStore((s) => s.setCurrentView)
+  const { logo } = useAppBranding()
+  useDynamicFavicon()
 
   // Login settings from server
   const [loginSettings, setLoginSettings] = useState<LoginSettings>({
@@ -166,7 +169,7 @@ export default function LoginForm() {
                     <div className="absolute inset-0 bg-primary/10 rounded-full blur-xl scale-150" />
                     <div className="relative bg-background rounded-full p-3 shadow-lg border border-primary/10">
                       <img
-                        src="/logo.svg"
+                        src={logo}
                         alt="Logo BKAD Kabupaten Seruyan"
                         className="w-16 h-16 sm:w-20 sm:h-20 object-contain"
                       />

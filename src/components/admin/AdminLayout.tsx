@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useSession, signOut } from 'next-auth/react'
 import { useAppStore, AppView } from '@/stores/app-store'
+import { useAppBranding, useDynamicFavicon } from '@/hooks/use-app-branding'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
@@ -108,6 +109,8 @@ function formatTimeAgo(dateStr: string): string {
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession()
   const { currentView, setCurrentView, sidebarOpen, setSidebarOpen } = useAppStore()
+  const { logo } = useAppBranding()
+  useDynamicFavicon()
 
   const userName = session?.user?.name || 'Administrator'
   const userRole = (session?.user as any)?.role || 'ADMIN'
@@ -213,7 +216,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="flex items-center gap-3 px-4 h-16 shrink-0 border-b border-white/10">
           <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
             <img
-              src="/logo.svg"
+              src={logo}
               alt="Logo BKAD"
               className="w-7 h-7 object-contain brightness-0 invert"
             />

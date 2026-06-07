@@ -35,14 +35,6 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Textarea } from '@/components/ui/textarea'
 import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationPrevious,
-  PaginationNext,
-} from '@/components/ui/pagination'
-import {
   Users,
   Search,
   Plus,
@@ -53,7 +45,6 @@ import {
   Upload,
   AlertTriangle,
   ChevronLeft,
-  ChevronRight,
   KeyRound,
   FileSpreadsheet,
   CheckCircle2,
@@ -62,6 +53,7 @@ import {
 import * as XLSX from 'xlsx'
 import { toast } from 'sonner'
 import ChangePasswordDialog from '@/components/shared/ChangePasswordDialog'
+import { PaginationBar } from '@/components/shared/PaginationBar'
 
 interface ASNItem {
   id: string
@@ -212,18 +204,6 @@ export default function AdminASN() {
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   )
-
-  const getPageNumbers = () => {
-    const pages: number[] = []
-    const maxVisible = 5
-    let start = Math.max(1, currentPage - Math.floor(maxVisible / 2))
-    const end = Math.min(totalPages, start + maxVisible - 1)
-    start = Math.max(1, end - maxVisible + 1)
-    for (let i = start; i <= end; i++) {
-      pages.push(i)
-    }
-    return pages
-  }
 
   const handleOpenAdd = () => {
     setEditMode(false)
@@ -649,52 +629,15 @@ export default function AdminASN() {
             </Table>
           </ScrollArea>
 
-          {/* Pagination - outside ScrollArea, pinned to bottom */}
-          {totalPages > 1 && (
-            <div className="border-t bg-muted/20 px-4 py-3 shrink-0">
-              <div className="flex items-center justify-between">
-                <p className="text-xs text-muted-foreground">
-                  Menampilkan {(currentPage - 1) * ITEMS_PER_PAGE + 1}–
-                  {Math.min(currentPage * ITEMS_PER_PAGE, asnList.length)} dari {asnList.length} data
-                </p>
-                <Pagination>
-                  <PaginationContent>
-                    <PaginationItem>
-                      <PaginationPrevious
-                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                        className={
-                          currentPage === 1
-                            ? 'pointer-events-none opacity-50'
-                            : 'cursor-pointer'
-                        }
-                      />
-                    </PaginationItem>
-                    {getPageNumbers().map((page) => (
-                      <PaginationItem key={page}>
-                        <PaginationLink
-                          isActive={page === currentPage}
-                          onClick={() => setCurrentPage(page)}
-                          className="cursor-pointer"
-                        >
-                          {page}
-                        </PaginationLink>
-                      </PaginationItem>
-                    ))}
-                    <PaginationItem>
-                      <PaginationNext
-                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                        className={
-                          currentPage === totalPages
-                            ? 'pointer-events-none opacity-50'
-                            : 'cursor-pointer'
-                        }
-                      />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
-              </div>
-            </div>
-          )}
+          {/* Pagination */}
+          <PaginationBar
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            totalItems={asnList.length}
+            itemsPerPage={ITEMS_PER_PAGE}
+            itemName="data"
+          />
         </Card>
       )}
 

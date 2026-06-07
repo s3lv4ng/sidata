@@ -48,6 +48,8 @@ import {
   Upload,
   Sparkles,
   ChevronDown,
+  Image as ImageIcon,
+  X,
 } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 
@@ -163,6 +165,10 @@ export default function AdminSettings() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<Set<string>>(new Set())
   const [saveAllLoading, setSaveAllLoading] = useState(false)
+
+  // Logo & Favicon upload state
+  const [uploadingLogo, setUploadingLogo] = useState(false)
+  const [uploadingFavicon, setUploadingFavicon] = useState(false)
 
   // Google Drive state
   const [driveStatus, setDriveStatus] = useState<{
@@ -514,6 +520,199 @@ export default function AdminSettings() {
                   </div>
                 )
               })}
+            </CardContent>
+          </Card>
+
+          {/* Logo & Favicon Upload Section */}
+          <Card className="border-border/60">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                <ImageIcon className="w-4 h-4" />
+                Logo & Favicon
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Logo Upload */}
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1 space-y-2">
+                  <Label className="text-sm font-medium flex items-center gap-2">
+                    <ImageIcon className="w-3.5 h-3.5 text-muted-foreground" />
+                    Logo Aplikasi
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Logo yang ditampilkan di sidebar, header, dan halaman login. Format: PNG, JPG, SVG, WebP (maks. 2MB)
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <div className="w-20 h-20 rounded-xl border-2 border-dashed border-border/60 bg-muted/10 flex items-center justify-center overflow-hidden shrink-0">
+                      {settings.appLogo ? (
+                        <img
+                          src={settings.appLogo}
+                          alt="Logo Preview"
+                          className="w-full h-full object-contain p-1"
+                        />
+                      ) : (
+                        <ImageIcon className="w-8 h-8 text-muted-foreground/30" />
+                      )}
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <Input
+                        type="file"
+                        accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0]
+                          if (!file) return
+                          if (file.size > 2 * 1024 * 1024) {
+                            addNotification('Ukuran file terlalu besar (maks. 2MB)', 'error')
+                            return
+                          }
+                          setUploadingLogo(true)
+                          try {
+                            const fd = new FormData()
+                            fd.append('file', file)
+                            fd.append('type', 'logo')
+                            fd.append('userId', userId)
+                            const res = await fetch('/api/upload-logo', { method: 'POST', body: fd })
+                            if (res.ok) {
+                              const data = await res.json()
+                              setSettings((prev) => ({ ...prev, appLogo: data.filePath }))
+                              setOriginalSettings((prev) => ({ ...prev, appLogo: data.filePath }))
+                              addNotification('Logo berhasil diunggah', 'success')
+                            } else {
+                              const data = await res.json()
+                              addNotification(data.error || 'Gagal mengunggah logo', 'error')
+                            }
+                          } catch {
+                            addNotification('Gagal mengunggah logo', 'error')
+                          } finally {
+                            setUploadingLogo(false)
+                            e.target.value = ''
+                          }
+                        }}
+                        disabled={uploadingLogo}
+                        className="text-xs"
+                      />
+                      <div className="flex items-center gap-2">
+                        {uploadingLogo && <Loader2 className="w-3 h-3 animate-spin text-primary" />}
+                        <span className="text-[11px] text-muted-foreground">
+                          {uploadingLogo ? 'Mengunggah...' : settings.appLogo ? 'Klik untuk ganti logo' : 'Pilih file logo'}
+                        </span>
+                      </div>
+                      {settings.appLogo && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs gap-1 text-red-500 hover:text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30"
+                          onClick={async () => {
+                            setSettings((prev) => ({ ...prev, appLogo: '' }))
+                            await fetch('/api/settings', {
+                              method: 'PUT',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ settings: { appLogo: '' }, userId }),
+                            })
+                            setOriginalSettings((prev) => ({ ...prev, appLogo: '' }))
+                            addNotification('Logo dihapus, menggunakan logo default', 'info')
+                          }}
+                        >
+                          <X className="w-3 h-3" />
+                          Hapus Logo
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Favicon Upload */}
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1 space-y-2">
+                  <Label className="text-sm font-medium flex items-center gap-2">
+                    <FileText className="w-3.5 h-3.5 text-muted-foreground" />
+                    Favicon
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Ikon kecil yang muncul di tab browser. Format: ICO, PNG, SVG (maks. 2MB, direkomendasikan 32×32px atau 64×64px)
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <div className="w-16 h-16 rounded-xl border-2 border-dashed border-border/60 bg-muted/10 flex items-center justify-center overflow-hidden shrink-0">
+                      {settings.appFavicon ? (
+                        <img
+                          src={settings.appFavicon}
+                          alt="Favicon Preview"
+                          className="w-full h-full object-contain p-2"
+                        />
+                      ) : (
+                        <FileText className="w-6 h-6 text-muted-foreground/30" />
+                      )}
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <Input
+                        type="file"
+                        accept="image/x-icon,image/png,image/svg+xml,image/vnd.microsoft.icon"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0]
+                          if (!file) return
+                          if (file.size > 2 * 1024 * 1024) {
+                            addNotification('Ukuran file terlalu besar (maks. 2MB)', 'error')
+                            return
+                          }
+                          setUploadingFavicon(true)
+                          try {
+                            const fd = new FormData()
+                            fd.append('file', file)
+                            fd.append('type', 'favicon')
+                            fd.append('userId', userId)
+                            const res = await fetch('/api/upload-logo', { method: 'POST', body: fd })
+                            if (res.ok) {
+                              const data = await res.json()
+                              setSettings((prev) => ({ ...prev, appFavicon: data.filePath }))
+                              setOriginalSettings((prev) => ({ ...prev, appFavicon: data.filePath }))
+                              addNotification('Favicon berhasil diunggah', 'success')
+                            } else {
+                              const data = await res.json()
+                              addNotification(data.error || 'Gagal mengunggah favicon', 'error')
+                            }
+                          } catch {
+                            addNotification('Gagal mengunggah favicon', 'error')
+                          } finally {
+                            setUploadingFavicon(false)
+                            e.target.value = ''
+                          }
+                        }}
+                        disabled={uploadingFavicon}
+                        className="text-xs"
+                      />
+                      <div className="flex items-center gap-2">
+                        {uploadingFavicon && <Loader2 className="w-3 h-3 animate-spin text-primary" />}
+                        <span className="text-[11px] text-muted-foreground">
+                          {uploadingFavicon ? 'Mengunggah...' : settings.appFavicon ? 'Klik untuk ganti favicon' : 'Pilih file favicon'}
+                        </span>
+                      </div>
+                      {settings.appFavicon && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs gap-1 text-red-500 hover:text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30"
+                          onClick={async () => {
+                            setSettings((prev) => ({ ...prev, appFavicon: '' }))
+                            await fetch('/api/settings', {
+                              method: 'PUT',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ settings: { appFavicon: '' }, userId }),
+                            })
+                            setOriginalSettings((prev) => ({ ...prev, appFavicon: '' }))
+                            addNotification('Favicon dihapus, menggunakan default', 'info')
+                          }}
+                        >
+                          <X className="w-3 h-3" />
+                          Hapus Favicon
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
@@ -1658,7 +1857,7 @@ export default function AdminSettings() {
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center">
                   <img
-                    src="/logo.svg"
+                    src={settings.appLogo || '/logo.svg'}
                     alt="Logo BKAD"
                     className="w-8 h-8 object-contain brightness-0 invert"
                   />

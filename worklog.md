@@ -396,3 +396,74 @@ Stage Summary:
 - ASN users can now edit their own profile data ✅ (email, phone, jabatan, pangkat, unitKerja)
 - All lint passes (only pre-existing custom-server.js warnings)
 - Verified with agent-browser: both features work correctly
+
+---
+Task ID: 9
+Agent: main
+Task: Add logo/favicon upload and fix pagination
+
+Work Log:
+- **Feature 1: Logo & Favicon Upload**
+  - Created `/api/upload-logo` API route for uploading logo and favicon files
+    - Validates file size (max 2MB), file type (PNG, JPG, SVG, WebP, ICO)
+    - Saves to `/upload` directory with unique filename
+    - Stores path in SystemSetting table (`appLogo`, `appFavicon` keys)
+    - Invalidates settings cache after upload
+    - Logs activity for admin actions
+  - Created `useAppBranding` hook (`/src/hooks/use-app-branding.ts`)
+    - Uses `useSyncExternalStore` for efficient state management
+    - Caches branding settings in memory to avoid repeated API calls
+    - Provides `logo`, `favicon`, `appName`, `appShortName` from settings
+    - Falls back to `/logo.svg` defaults
+  - Created `useDynamicFavicon` hook
+    - Updates `<link rel="icon">` tag dynamically when favicon setting changes
+  - Added Logo & Favicon upload section in AdminSettings Identitas tab
+    - Logo upload: preview box (80x80), file input, loading state, delete button
+    - Favicon upload: preview box (64x64), file input, loading state, delete button
+    - File type validation and size limits displayed
+    - Hapus Logo/Hapus Favicon buttons to reset to defaults
+  - Updated all components using `/logo.svg` to use dynamic `useAppBranding` hook:
+    - AdminLayout.tsx sidebar logo
+    - ASNHomepage.tsx header logo
+    - LoginForm.tsx center logo
+    - SetupWizard.tsx welcome + header logos
+    - AdminSettings.tsx preview card logo
+  - Added `useDynamicFavicon()` calls in AdminLayout and ASNHomepage
+  - Added `ImageIcon` and `X` icon imports to AdminSettings
+
+- **Feature 2: Fix & Standardize Pagination**
+  - Created shared `PaginationBar` component (`/src/components/shared/PaginationBar.tsx`)
+    - Consistent styling across all admin pages
+    - Responsive layout: stacked on mobile, side-by-side on desktop
+    - Shows "Menampilkan X–Y dari Z data" text with custom item name
+    - Smart page number generation with ellipsis for large page counts
+    - Uses shadcn/ui Pagination primitives (PaginationPrevious/Next with arrows)
+    - Hides when only 1 page
+  - Updated AdminASN.tsx to use PaginationBar
+    - Removed old getPageNumbers function
+    - Removed direct Pagination component imports
+    - Replaced inline pagination UI with <PaginationBar> component
+  - Updated AdminResponses.tsx to use PaginationBar
+    - Same pattern as AdminASN
+  - Updated AdminUsers.tsx to use PaginationBar
+    - Replaced custom Button-based pagination (Sebelumnya/Berikutnya text buttons)
+    - Now uses consistent arrow-based navigation
+  - Updated AdminActivityLogs.tsx to use PaginationBar
+    - Replaced custom Button-based pagination (Sebelumnya/Selanjutnya text buttons)
+    - Now uses consistent arrow-based navigation
+  - All 4 admin tables now have identical pagination behavior
+
+Stage Summary:
+- Logo & Favicon upload fully functional ✅
+  - Admin can upload custom logo and favicon from Settings → Identitas tab
+  - Logo dynamically updates in sidebar, header, login page, setup wizard
+  - Favicon dynamically updates browser tab icon
+  - Delete buttons to revert to defaults
+  - File stored in upload/ directory and path saved in SystemSetting
+- Pagination standardized across all admin pages ✅
+  - All 4 tables (ASN, Responses, Users, Activity Logs) use same PaginationBar
+  - Mobile-responsive layout
+  - Consistent arrow navigation instead of text buttons
+  - Smart page number display with ellipsis
+- All lint passes (only pre-existing custom-server.js warnings)
+- Server compiles and serves pages correctly (tested with curl)

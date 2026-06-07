@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useSession, signOut } from 'next-auth/react'
 import { useAppStore } from '@/stores/app-store'
+import { useAppBranding, useDynamicFavicon } from '@/hooks/use-app-branding'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -161,6 +162,8 @@ function getDeadlineCountdown(deadline: string): { text: string; urgent: boolean
 export default function ASNHomepage() {
   const { data: session } = useSession()
   const { setCurrentView, setSelectedForm } = useAppStore()
+  const { logo } = useAppBranding()
+  useDynamicFavicon()
 
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [forms, setForms] = useState<FormItem[]>([])
@@ -481,7 +484,7 @@ export default function ASNHomepage() {
           <div className="flex items-center gap-3">
             <div className="bg-primary/10 rounded-lg p-1.5">
               <img
-                src="/logo.svg"
+                src={logo}
                 alt="Logo BKAD"
                 className="w-8 h-8 sm:w-10 sm:h-10 object-contain"
               />

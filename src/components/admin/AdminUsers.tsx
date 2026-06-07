@@ -49,6 +49,7 @@ import {
   User,
   Mail,
 } from 'lucide-react'
+import { PaginationBar } from '@/components/shared/PaginationBar'
 
 interface UserItem {
   id: string
@@ -635,55 +636,15 @@ export default function AdminUsers() {
               </Table>
             </ScrollArea>
 
-            {/* Pagination - outside ScrollArea, pinned to bottom */}
-            {totalPages > 1 && (
-              <div className="border-t bg-muted/20 px-4 py-3 shrink-0">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-muted-foreground">
-                    Menampilkan {(currentPage - 1) * ITEMS_PER_PAGE + 1}
-                    –{Math.min(currentPage * ITEMS_PER_PAGE, filteredUsers.length)} dari{' '}
-                    {filteredUsers.length} data
-                  </p>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={currentPage === 1}
-                      onClick={() => setCurrentPage((p) => p - 1)}
-                      className="h-8 text-xs"
-                    >
-                      Sebelumnya
-                    </Button>
-                    {Array.from({ length: totalPages }, (_, i) => i + 1)
-                      .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
-                      .map((page, idx, arr) => (
-                        <span key={page} className="flex items-center">
-                          {idx > 0 && arr[idx - 1] !== page - 1 && (
-                            <span className="px-1 text-xs text-muted-foreground">...</span>
-                          )}
-                          <Button
-                            variant={currentPage === page ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => setCurrentPage(page)}
-                            className="h-8 w-8 text-xs p-0"
-                          >
-                            {page}
-                          </Button>
-                        </span>
-                      ))}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={currentPage === totalPages}
-                      onClick={() => setCurrentPage((p) => p + 1)}
-                      className="h-8 text-xs"
-                    >
-                      Berikutnya
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* Pagination */}
+            <PaginationBar
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={filteredUsers.length}
+              itemsPerPage={ITEMS_PER_PAGE}
+              itemName="data"
+            />
           </>
         )}
       </Card>

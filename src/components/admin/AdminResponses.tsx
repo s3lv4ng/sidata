@@ -38,14 +38,6 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
 import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationPrevious,
-  PaginationNext,
-} from '@/components/ui/pagination'
-import {
   ClipboardList,
   Search,
   Eye,
@@ -68,6 +60,7 @@ import {
 } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts'
 import * as XLSX from 'xlsx'
+import { PaginationBar } from '@/components/shared/PaginationBar'
 
 interface FormOption {
   id: string
@@ -327,18 +320,6 @@ export default function AdminResponses() {
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   )
-
-  const getPageNumbers = () => {
-    const pages: number[] = []
-    const maxVisible = 5
-    let start = Math.max(1, currentPage - Math.floor(maxVisible / 2))
-    const end = Math.min(totalPages, start + maxVisible - 1)
-    start = Math.max(1, end - maxVisible + 1)
-    for (let i = start; i <= end; i++) {
-      pages.push(i)
-    }
-    return pages
-  }
 
   // Statistics
   const respondedUserIds = new Set(responses.map((r) => r.userId))
@@ -870,53 +851,15 @@ export default function AdminResponses() {
                 </Table>
               </ScrollArea>
 
-              {/* Pagination - outside ScrollArea, pinned to bottom */}
-              {totalPages > 1 && (
-                <div className="border-t bg-muted/20 px-4 py-3 shrink-0">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs text-muted-foreground">
-                      Menampilkan {(currentPage - 1) * ITEMS_PER_PAGE + 1}–
-                      {Math.min(currentPage * ITEMS_PER_PAGE, filteredResponses.length)} dari{' '}
-                      {filteredResponses.length} respons
-                    </p>
-                    <Pagination>
-                      <PaginationContent>
-                        <PaginationItem>
-                          <PaginationPrevious
-                            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                            className={
-                              currentPage === 1
-                                ? 'pointer-events-none opacity-50'
-                                : 'cursor-pointer'
-                            }
-                          />
-                        </PaginationItem>
-                        {getPageNumbers().map((page) => (
-                          <PaginationItem key={page}>
-                            <PaginationLink
-                              isActive={page === currentPage}
-                              onClick={() => setCurrentPage(page)}
-                              className="cursor-pointer"
-                            >
-                              {page}
-                            </PaginationLink>
-                          </PaginationItem>
-                        ))}
-                        <PaginationItem>
-                          <PaginationNext
-                            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                            className={
-                              currentPage === totalPages
-                                ? 'pointer-events-none opacity-50'
-                                : 'cursor-pointer'
-                            }
-                          />
-                        </PaginationItem>
-                      </PaginationContent>
-                    </Pagination>
-                  </div>
-                </div>
-              )}
+              {/* Pagination */}
+              <PaginationBar
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                totalItems={filteredResponses.length}
+                itemsPerPage={ITEMS_PER_PAGE}
+                itemName="respons"
+              />
             </Card>
           )}
 
