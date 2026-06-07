@@ -161,6 +161,8 @@ export default function AdminSettings() {
     connected: boolean
     folder?: { name: string; id: string }
     files?: any[]
+    canUpload?: boolean
+    uploadWarning?: string
     message: string
     error?: {
       message: string
@@ -170,6 +172,7 @@ export default function AdminSettings() {
       isAuthError?: boolean
       isNotFoundError?: boolean
       isPermissionError?: boolean
+      isQuotaError?: boolean
     }
   } | null>(null)
   const [testingDrive, setTestingDrive] = useState(false)
@@ -918,15 +921,19 @@ export default function AdminSettings() {
                     <Badge
                       variant="outline"
                       className={`text-[10px] ${
-                        driveStatus.connected
+                        driveStatus.connected && driveStatus.canUpload !== false
                           ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800'
-                          : driveStatus.configured
-                            ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800'
-                            : 'bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-900/20 dark:text-gray-400 dark:border-gray-800'
+                          : driveStatus.connected && driveStatus.canUpload === false
+                            ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800'
+                            : driveStatus.configured
+                              ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800'
+                              : 'bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-900/20 dark:text-gray-400 dark:border-gray-800'
                       }`}
                     >
-                      {driveStatus.connected ? (
+                      {driveStatus.connected && driveStatus.canUpload !== false ? (
                         <><Cloud className="w-3 h-3 mr-1" /> Terhubung</>
+                      ) : driveStatus.connected && driveStatus.canUpload === false ? (
+                        <><AlertCircle className="w-3 h-3 mr-1" /> Upload Terbatas</>
                       ) : driveStatus.configured ? (
                         <><CloudOff className="w-3 h-3 mr-1" /> Gagal Terhubung</>
                       ) : (
@@ -950,26 +957,47 @@ export default function AdminSettings() {
             <CardContent className="space-y-4">
               {/* Connection info */}
               {driveStatus && driveStatus.connected && driveStatus.folder && (
-                <div className="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 dark:border-emerald-800 dark:bg-emerald-900/10">
-                  <FolderOpen className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300 truncate">
-                      {driveStatus.folder.name}
-                    </p>
-                    <p className="text-[11px] text-emerald-600/70 dark:text-emerald-400/70">
-                      ID: {driveStatus.folder.id}
-                    </p>
+                <>
+                  <div className="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 dark:border-emerald-800 dark:bg-emerald-900/10">
+                    <FolderOpen className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300 truncate">
+                        {driveStatus.folder.name}
+                      </p>
+                      <p className="text-[11px] text-emerald-600/70 dark:text-emerald-400/70">
+                        ID: {driveStatus.folder.id}
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 gap-1.5 text-xs shrink-0"
+                      onClick={() => setDriveFilesDialogOpen(true)}
+                    >
+                      <FileText className="w-3 h-3" />
+                      Lihat File
+                    </Button>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 gap-1.5 text-xs shrink-0"
-                    onClick={() => setDriveFilesDialogOpen(true)}
-                  >
-                    <FileText className="w-3 h-3" />
-                    Lihat File
-                  </Button>
-                </div>
+                  {/* Upload warning for My Drive folders */}
+                  {driveStatus.uploadWarning && (
+                    <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50/50 p-3 dark:border-amber-800 dark:bg-amber-900/10">
+                      <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                      <div className="text-xs text-amber-700 dark:text-amber-300 space-y-1.5">
+                        <p className="font-medium">Upload File ke Google Drive Terbatas</p>
+                        <p>{driveStatus.uploadWarning}</p>
+                        <p className="font-medium mt-2">Cara Menggunakan Shared Drive:</p>
+                        <ol className="list-decimal list-inside space-y-0.5">
+                          <li>Buka Google Drive</li>
+                          <li>Klik <strong>Drive Bersama/Shared Drives</strong> di sidebar kiri</li>
+                          <li>Buat Drive Bersama baru atau gunakan yang sudah ada</li>
+                          <li>Tambahkan Service Account <code className="bg-amber-100 dark:bg-amber-900/50 px-1 rounded">{settings.googleDriveClientEmail || 'email-sa'}</code> sebagai <strong>Content Manager</strong></li>
+                          <li>Buat folder di dalam Drive Bersama tersebut</li>
+                          <li>Copy Folder ID dari URL dan update di pengaturan</li>
+                        </ol>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
 
               {driveStatus && !driveStatus.connected && driveStatus.configured && (
@@ -1035,6 +1063,21 @@ export default function AdminSettings() {
                           <li>Pastikan Folder ID benar (dari URL folder Google Drive)</li>
                           <li>Format URL: <code className="bg-amber-100 dark:bg-amber-900/50 px-1 rounded">drive.google.com/drive/folders/<strong>FOLDER_ID</strong></code></li>
                           <li>Pastikan folder sudah dibagikan ke Service Account</li>
+                        </ol>
+                      </div>
+                    </div>
+                  )}
+                  {driveStatus.error?.isQuotaError && (
+                    <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50/50 p-3 dark:border-amber-800 dark:bg-amber-900/10">
+                      <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                      <div className="text-xs text-amber-700 dark:text-amber-300 space-y-1.5">
+                        <p className="font-medium">Kuota Penyimpanan Tidak Cukup</p>
+                        <p>Service Account tidak memiliki kuota penyimpanan Google Drive. Gunakan Shared Drive (Drive Bersama) sebagai folder target.</p>
+                        <ol className="list-decimal list-inside space-y-0.5 mt-1">
+                          <li>Buat Drive Bersama/Shared Drive di Google Drive</li>
+                          <li>Tambahkan Service Account sebagai Content Manager</li>
+                          <li>Buat folder di dalam Drive Bersama</li>
+                          <li>Update Folder ID di pengaturan</li>
                         </ol>
                       </div>
                     </div>

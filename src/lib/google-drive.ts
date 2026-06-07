@@ -1,4 +1,5 @@
 import { google } from 'googleapis'
+import { Readable } from 'stream'
 import { db } from './db'
 
 // Google Drive configuration interface
@@ -17,6 +18,7 @@ export interface DriveError {
   isAuthError?: boolean
   isNotFoundError?: boolean
   isPermissionError?: boolean
+  isQuotaError?: boolean
 }
 
 // Parse Google API error into a user-friendly DriveError
@@ -67,6 +69,15 @@ function parseDriveError(error: any): DriveError {
       code,
       reason: 'API_NOT_ENABLED',
       isApiDisabled: true,
+    }
+  }
+
+  if (errMsg.includes('storage quota') || errMsg.includes('Storage quota exceeded') || errMsg.includes('do not have storage quota')) {
+    return {
+      message: 'Service Account tidak memiliki kuota penyimpanan. Gunakan Shared Drive (Drive Bersama) sebagai folder target, atau aktifkan domain-wide delegation di Google Cloud Console.',
+      code,
+      reason: 'STORAGE_QUOTA',
+      isQuotaError: true,
     }
   }
 
@@ -128,13 +139,13 @@ function createDriveClient(config: DriveConfig) {
       client_email: config.clientEmail,
       private_key: config.privateKey,
     },
-    scopes: ['https://www.googleapis.com/auth/drive.file'],
+    scopes: ['https://www.googleapis.com/auth/drive'],
   })
 
   return google.drive({ version: 'v3', auth })
 }
 
-// Upload a file to Google Drive
+// Upload a file to Google Drive (supports Shared Drives)
 export async function uploadToDrive(
   fileBuffer: Buffer,
   fileName: string,
@@ -157,6 +168,9 @@ export async function uploadToDrive(
     const baseName = fileName.includes('.') ? fileName.slice(0, fileName.lastIndexOf('.')) : fileName
     const uniqueFileName = `${baseName}_${timestamp}${ext}`
 
+    // Convert Buffer to Readable stream (Google Drive API requires a stream)
+    const readableStream = Readable.from(fileBuffer)
+
     const response = await drive.files.create({
       requestBody: {
         name: uniqueFileName,
@@ -164,9 +178,10 @@ export async function uploadToDrive(
       },
       media: {
         mimeType,
-        body: fileBuffer,
+        body: readableStream,
       },
       fields: 'id, webViewLink',
+      supportsAllDrives: true,
     })
 
     if (!response.data.id || !response.data.webViewLink) {
@@ -175,13 +190,20 @@ export async function uploadToDrive(
     }
 
     // Make the file accessible to anyone with the link
-    await drive.permissions.create({
-      fileId: response.data.id,
-      requestBody: {
-        role: 'reader',
-        type: 'anyone',
-      },
-    })
+    try {
+      await drive.permissions.create({
+        fileId: response.data.id,
+        requestBody: {
+          role: 'reader',
+          type: 'anyone',
+        },
+        supportsAllDrives: true,
+      })
+    } catch (permError: any) {
+      // Permission setting failed - file is uploaded but not publicly accessible
+      // This is not critical, the file still exists in Drive
+      console.warn('Could not set public permission on Drive file:', permError?.message)
+    }
 
     return {
       fileId: response.data.id,
@@ -200,7 +222,7 @@ export async function deleteFromDrive(fileId: string): Promise<boolean> {
     if (!config) return false
 
     const drive = createDriveClient(config)
-    await drive.files.delete({ fileId })
+    await drive.files.delete({ fileId, supportsAllDrives: true })
     return true
   } catch (error: any) {
     console.error('Error deleting from Google Drive:', error?.message || error)
@@ -220,6 +242,9 @@ export async function listDriveFiles(maxResults: number = 10): Promise<any[] | n
       pageSize: maxResults,
       fields: 'files(id, name, mimeType, webViewLink, createdTime, size)',
       orderBy: 'createdTime desc',
+      includeItemsFromAllDrives: true,
+      supportsAllDrives: true,
+      corpora: 'allDrives',
     })
 
     return response.data.files || []
@@ -238,17 +263,20 @@ export async function getFolderInfo(): Promise<{ name: string; id: string }> {
   const response = await drive.files.get({
     fileId: config.folderId,
     fields: 'id, name',
+    supportsAllDrives: true,
   })
 
   return response.data as { name: string; id: string }
 }
 
-// Test connection - returns detailed result with error info
+// Test connection - also tests if upload is possible by checking folder type
 export async function testDriveConnection(): Promise<{
   configured: boolean
   connected: boolean
   folder?: { name: string; id: string }
   files?: any[]
+  canUpload?: boolean
+  uploadWarning?: string
   error?: DriveError
   message: string
 }> {
@@ -269,11 +297,35 @@ export async function testDriveConnection(): Promise<{
       // List recent files
       const files = await listDriveFiles(10)
 
+      // Check if folder is in a Shared Drive by trying to get more details
+      let canUpload = true
+      let uploadWarning: string | undefined
+
+      try {
+        const drive = createDriveClient(config)
+        const folderDetail = await drive.files.get({
+          fileId: config.folderId,
+          fields: 'id, name, driveId',
+          supportsAllDrives: true,
+        })
+
+        // If driveId exists, it's in a Shared Drive - upload should work
+        // If no driveId, it's in My Drive - upload may fail due to Service Account quota
+        if (!folderDetail.data.driveId) {
+          canUpload = false
+          uploadWarning = 'Folder ini berada di "My Drive" (Drive Pribadi), bukan Shared Drive. Upload file oleh Service Account mungkin gagal karena Service Account tidak memiliki kuota penyimpanan. Gunakan Shared Drive (Drive Bersama) untuk mengatasi masalah ini.'
+        }
+      } catch {
+        // Can't determine folder type, assume it works
+      }
+
       return {
         configured: true,
         connected: true,
         folder: folderInfo,
         files: files || [],
+        canUpload,
+        uploadWarning,
         message: 'Google Drive terhubung dengan sukses.',
       }
     } catch (error: any) {

@@ -254,3 +254,54 @@ Stage Summary:
 - Simplified settings: No separate API Key needed for Sheets, uses same Service Account as Drive
 - Auto-sync feature: Toggle in settings, appends new responses automatically
 - All lint passes (only pre-existing custom-server.js warnings)
+
+---
+Task ID: 5
+Agent: main
+Task: Connect Google Drive and Google Sheets with Service Account credentials
+
+Work Log:
+- Saved user's Service Account credentials to database settings:
+  - Email: asn-884@asnsubmit.iam.gserviceaccount.com
+  - Private Key: (saved securely)
+  - Folder ID: 1i1YdT_WTDG4h72G_LTuGEf0hYctHUtw1
+- Fixed Google Drive scope: changed from `drive.file` to `drive` to allow access to existing shared folders
+- After scope fix: Google Drive connection test PASSED (folder "sidata" found)
+- Fixed Google Sheets Spreadsheet ID: was set to full URL instead of just the ID
+  - Changed from: docs.google.com/spreadsheets/d/1jGN-NznT6K8pOAFpqnPQOBKLqZlVzDW4OLQO0dM2-G8/edit?usp=sharing
+  - Changed to: 1jGN-NznT6K8pOAFpqnPQOBKLqZlVzDW4OLQO0dM2-G8
+- After fix: Google Sheets connection test PASSED (spreadsheet "sidata" found with 2 sheets)
+- Tested ASN data sync: 12 ASN records successfully synced to Google Sheets
+- Tested form response sync: 1 response from "Permohonan" form synced to new "Permohonan" sheet
+- Fixed Drive upload function: Buffer needs to be converted to Readable stream for googleapis
+  - Added `import { Readable } from 'stream'` and `Readable.from(fileBuffer)`
+- Discovered Service Account storage quota limitation:
+  - Error: "Service Accounts do not have storage quota"
+  - Root cause: Folder is in "My Drive" (personal), not a Shared Drive
+  - Files uploaded by Service Account use SA's quota (which is 0)
+  - Solution: Use Shared Drive (Drive Bersama) instead
+- Updated google-drive.ts with Shared Drive support:
+  - Added `supportsAllDrives: true` to all API calls (files.get, files.list, files.create, files.delete, permissions.create)
+  - Added `includeItemsFromAllDrives: true` and `corpora: 'allDrives'` to files.list
+  - Added `canUpload` and `uploadWarning` fields to testDriveConnection() response
+  - Added `isQuotaError` to DriveError interface
+  - Added quota error detection in parseDriveError()
+  - Auto-detects if folder is in My Drive vs Shared Drive by checking `driveId` field
+- Updated AdminSettings component:
+  - Updated driveStatus state type to include canUpload, uploadWarning, isQuotaError
+  - Changed connection badge to show "Upload Terbatas" (amber) when connected but can't upload
+  - Added detailed upload warning section with step-by-step Shared Drive setup instructions
+  - Added quota error troubleshooting section
+  - Shows Service Account email in setup instructions for easy copy
+
+Stage Summary:
+- Google Drive: CONNECTED ✅ (folder "sidata" accessible)
+  - Upload: LIMITED ⚠️ (folder in My Drive, needs Shared Drive for file uploads)
+  - Connection test works, file listing works
+  - File upload requires Shared Drive to work with Service Account
+- Google Sheets: CONNECTED ✅ (spreadsheet "sidata" with 2 sheets)
+  - ASN data sync: WORKING ✅ (12 records synced)
+  - Form response sync: WORKING ✅ (responses synced per form)
+  - Auto-sync on form submit: WORKING ✅
+- All lint passes (only pre-existing custom-server.js warnings)
+- Verified with agent-browser: both tabs show correct status
