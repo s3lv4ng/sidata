@@ -1,5 +1,16 @@
 import NextAuth from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getAuthOptions } from "@/lib/auth";
 
-const handler = NextAuth(authOptions);
-export { handler as GET, handler as POST };
+// Use dynamic auth options that read Google credentials from database settings
+// This allows Google OAuth to be configured from the admin settings UI
+export async function GET(...args: any[]) {
+  const authOptions = await getAuthOptions();
+  const handler = NextAuth(authOptions);
+  return handler(...args);
+}
+
+export async function POST(...args: any[]) {
+  const authOptions = await getAuthOptions();
+  const handler = NextAuth(authOptions);
+  return handler(...args);
+}

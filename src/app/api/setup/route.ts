@@ -121,6 +121,10 @@ export async function POST(request: NextRequest) {
           showPasswordLogin: data.showPasswordLogin !== false ? "true" : "false",
         };
 
+        // Also save Google OAuth credentials if provided
+        if (data.googleLoginClientId !== undefined) settings.googleLoginClientId = data.googleLoginClientId;
+        if (data.googleLoginClientSecret !== undefined) settings.googleLoginClientSecret = data.googleLoginClientSecret;
+
         for (const [key, value] of Object.entries(settings)) {
           await db.systemSetting.upsert({
             where: { key },

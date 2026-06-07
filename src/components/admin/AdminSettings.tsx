@@ -163,6 +163,7 @@ export default function AdminSettings() {
   const [testingDrive, setTestingDrive] = useState(false)
   const [driveFilesDialogOpen, setDriveFilesDialogOpen] = useState(false)
   const [showDriveCredentials, setShowDriveCredentials] = useState(false)
+  const [showGoogleClientSecret, setShowGoogleClientSecret] = useState(false)
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -550,7 +551,159 @@ export default function AdminSettings() {
             />
           </div>
 
-          {(isChanged('loginWithNip') || isChanged('loginWithGoogle') || isChanged('showPasswordLogin')) && (
+          {/* Google OAuth Configuration - shown when Google login is enabled */}
+          {settings.loginWithGoogle === 'true' && (
+            <div className="space-y-4 ml-2 pl-4 border-l-2 border-red-200 dark:border-red-800">
+              {/* Setup Instructions */}
+              <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50/50 p-3 dark:border-blue-800 dark:bg-blue-900/10">
+                <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                <div className="text-sm text-blue-700 dark:text-blue-300">
+                  <p className="font-medium mb-1">Cara Mengatur Login Google:</p>
+                  <ol className="list-decimal list-inside space-y-0.5 text-xs text-blue-600 dark:text-blue-400">
+                    <li>Buka <a href="https://console.cloud.google.com" target="_blank" rel="noopener noreferrer" className="underline inline-flex items-center gap-0.5">Google Cloud Console <ExternalLink className="w-2.5 h-2.5" /></a></li>
+                    <li>Buat project baru atau pilih project yang ada</li>
+                    <li>Buka menu <strong>APIs & Services → Credentials</strong></li>
+                    <li>Klik <strong>Create Credentials → OAuth client ID</strong></li>
+                    <li>Pilih <strong>Web application</strong> sebagai Application type</li>
+                    <li>Tambahkan <strong>Authorized redirect URI</strong>: <code className="bg-blue-100 dark:bg-blue-800/50 px-1 rounded text-[11px]">{typeof window !== 'undefined' ? window.location.origin : ''}/api/auth/callback/google</code></li>
+                    <li>Copy <strong>Client ID</strong> dan <strong>Client Secret</strong> ke form di bawah</li>
+                  </ol>
+                </div>
+              </div>
+
+              {/* Google Client ID */}
+              <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+                <div className="flex-1 space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <Key className="w-3.5 h-3.5 text-muted-foreground" />
+                    <Label className="text-sm font-medium">Google Client ID</Label>
+                    {isChanged('googleLoginClientId') && (
+                      <Badge
+                        variant="outline"
+                        className="text-[9px] font-medium bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800"
+                      >
+                        Diubah
+                      </Badge>
+                    )}
+                    {!!originalSettings.googleLoginClientId && !isChanged('googleLoginClientId') && (
+                      <Badge variant="outline" className="text-[9px] font-medium bg-gray-50 text-gray-500 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700">
+                        Terisi
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">OAuth Client ID dari Google Cloud Console</p>
+                  <Input
+                    placeholder="123456789-abc.apps.googleusercontent.com"
+                    value={settings.googleLoginClientId || ''}
+                    onChange={(e) => handleChange('googleLoginClientId', e.target.value)}
+                    className={isChanged('googleLoginClientId') ? 'border-amber-300 focus-visible:ring-amber-200' : ''}
+                  />
+                </div>
+                <Button
+                  size="sm"
+                  variant={isChanged('googleLoginClientId') ? 'default' : 'outline'}
+                  disabled={!isChanged('googleLoginClientId') || saving.has('googleLoginClientId')}
+                  onClick={() => handleSaveOne('googleLoginClientId')}
+                  className="gap-1.5 shrink-0 sm:self-end"
+                >
+                  {saving.has('googleLoginClientId') ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                  {saving.has('googleLoginClientId') ? 'Menyimpan...' : isChanged('googleLoginClientId') ? 'Simpan' : 'Tersimpan'}
+                </Button>
+              </div>
+
+              {/* Google Client Secret */}
+              <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+                <div className="flex-1 space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <Key className="w-3.5 h-3.5 text-muted-foreground" />
+                    <Label className="text-sm font-medium">Google Client Secret</Label>
+                    {isChanged('googleLoginClientSecret') && (
+                      <Badge
+                        variant="outline"
+                        className="text-[9px] font-medium bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800"
+                      >
+                        Diubah
+                      </Badge>
+                    )}
+                    {!!originalSettings.googleLoginClientSecret && !isChanged('googleLoginClientSecret') && (
+                      <Badge variant="outline" className="text-[9px] font-medium bg-gray-50 text-gray-500 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700">
+                        Terisi
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">OAuth Client Secret dari Google Cloud Console</p>
+                  <div className="relative">
+                    <Input
+                      type={showGoogleClientSecret ? 'text' : 'password'}
+                      placeholder="GOCSPX-xxxxxxxxxxxxxxxxx"
+                      value={originalSettings.googleLoginClientSecret && !isChanged('googleLoginClientSecret') ? '••••••••••••••••' : (settings.googleLoginClientSecret || '')}
+                      onChange={(e) => handleChange('googleLoginClientSecret', e.target.value)}
+                      onFocus={() => {
+                        if (originalSettings.googleLoginClientSecret && settings.googleLoginClientSecret === originalSettings.googleLoginClientSecret) {
+                          handleChange('googleLoginClientSecret', '')
+                        }
+                      }}
+                      className={`pr-10 ${isChanged('googleLoginClientSecret') ? 'border-amber-300 focus-visible:ring-amber-200' : ''}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowGoogleClientSecret(!showGoogleClientSecret)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      tabIndex={-1}
+                    >
+                      {showGoogleClientSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  variant={isChanged('googleLoginClientSecret') ? 'default' : 'outline'}
+                  disabled={!isChanged('googleLoginClientSecret') || saving.has('googleLoginClientSecret')}
+                  onClick={() => handleSaveOne('googleLoginClientSecret')}
+                  className="gap-1.5 shrink-0 sm:self-end"
+                >
+                  {saving.has('googleLoginClientSecret') ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                  {saving.has('googleLoginClientSecret') ? 'Menyimpan...' : isChanged('googleLoginClientSecret') ? 'Simpan' : 'Tersimpan'}
+                </Button>
+              </div>
+
+              {/* Configuration Status */}
+              {(() => {
+                const hasClientId = !!(settings.googleLoginClientId || '').trim()
+                const hasClientSecret = !!(settings.googleLoginClientSecret || '').trim()
+                const isFullyConfigured = hasClientId && hasClientSecret
+                return (
+                  <div className={`flex items-center gap-2 rounded-lg border p-2.5 ${
+                    isFullyConfigured
+                      ? 'border-emerald-200 bg-emerald-50/50 dark:border-emerald-800 dark:bg-emerald-900/10'
+                      : 'border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-900/10'
+                  }`}>
+                    {isFullyConfigured ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                    )}
+                    <span className={`text-xs font-medium ${
+                      isFullyConfigured
+                        ? 'text-emerald-700 dark:text-emerald-300'
+                        : 'text-amber-700 dark:text-amber-300'
+                    }`}>
+                      {isFullyConfigured
+                        ? 'Google OAuth terkonfigurasi. Login Google akan aktif setelah disimpan.'
+                        : !hasClientId && !hasClientSecret
+                          ? 'Client ID dan Client Secret belum diisi. Login Google tidak akan berfungsi.'
+                          : !hasClientId
+                            ? 'Client ID belum diisi.'
+                            : 'Client Secret belum diisi.'
+                      }
+                    </span>
+                  </div>
+                )
+              })()}
+            </div>
+          )}
+
+          {(isChanged('loginWithNip') || isChanged('loginWithGoogle') || isChanged('showPasswordLogin') || isChanged('googleLoginClientId') || isChanged('googleLoginClientSecret')) && (
             <div className="flex justify-end">
               <Button
                 onClick={async () => {
@@ -558,6 +711,8 @@ export default function AdminSettings() {
                   if (isChanged('loginWithNip')) loginSettings.loginWithNip = settings.loginWithNip || 'true'
                   if (isChanged('loginWithGoogle')) loginSettings.loginWithGoogle = settings.loginWithGoogle || 'false'
                   if (isChanged('showPasswordLogin')) loginSettings.showPasswordLogin = settings.showPasswordLogin || 'true'
+                  if (isChanged('googleLoginClientId')) loginSettings.googleLoginClientId = settings.googleLoginClientId || ''
+                  if (isChanged('googleLoginClientSecret')) loginSettings.googleLoginClientSecret = settings.googleLoginClientSecret || ''
                   try {
                     const res = await fetch('/api/settings', {
                       method: 'PUT',

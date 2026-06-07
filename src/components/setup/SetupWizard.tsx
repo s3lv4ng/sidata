@@ -39,6 +39,8 @@ import {
   HardDrive,
   Rocket,
   PartyPopper,
+  AlertCircle,
+  ExternalLink,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -81,6 +83,9 @@ export default function SetupWizard() {
   const [loginWithNip, setLoginWithNip] = useState(true)
   const [loginWithGoogle, setLoginWithGoogle] = useState(false)
   const [showPasswordLogin, setShowPasswordLogin] = useState(true)
+  const [googleLoginClientId, setGoogleLoginClientId] = useState('')
+  const [googleLoginClientSecret, setGoogleLoginClientSecret] = useState('')
+  const [showGoogleClientSecret, setShowGoogleClientSecret] = useState(false)
 
   // Google Integration
   const [googleDriveClientEmail, setGoogleDriveClientEmail] = useState('')
@@ -123,6 +128,8 @@ export default function SetupWizard() {
             if (s.loginWithNip) setLoginWithNip(s.loginWithNip !== 'false')
             if (s.loginWithGoogle) setLoginWithGoogle(s.loginWithGoogle === 'true')
             if (s.showPasswordLogin) setShowPasswordLogin(s.showPasswordLogin !== 'false')
+            if (s.googleLoginClientId) setGoogleLoginClientId(s.googleLoginClientId)
+            if (s.googleLoginClientSecret) setGoogleLoginClientSecret(s.googleLoginClientSecret)
             if (s.googleDriveClientEmail) setGoogleDriveClientEmail(s.googleDriveClientEmail)
             if (s.googleDriveFolderId) setGoogleDriveFolderId(s.googleDriveFolderId)
             if (s.googleSheetsApiKey) setGoogleSheetsApiKey(s.googleSheetsApiKey)
@@ -215,6 +222,14 @@ export default function SetupWizard() {
             setError('Minimal satu metode login harus diaktifkan')
             break
           }
+          if (loginWithGoogle && !googleLoginClientId.trim()) {
+            setError('Google Client ID harus diisi jika login Google diaktifkan')
+            break
+          }
+          if (loginWithGoogle && !googleLoginClientSecret.trim()) {
+            setError('Google Client Secret harus diisi jika login Google diaktifkan')
+            break
+          }
           const res = await fetch('/api/setup', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -224,6 +239,8 @@ export default function SetupWizard() {
                 loginWithNip,
                 loginWithGoogle,
                 showPasswordLogin,
+                googleLoginClientId: googleLoginClientId.trim(),
+                googleLoginClientSecret: googleLoginClientSecret.trim(),
               },
             }),
           })
@@ -351,7 +368,8 @@ export default function SetupWizard() {
       case 'admin-account':
         return adminNip.trim().length > 0 && adminName.trim().length > 0 && adminPassword.length >= 6 && adminPassword === adminPasswordConfirm
       case 'login-methods':
-        return loginWithNip || loginWithGoogle
+        return (loginWithNip || loginWithGoogle) &&
+          (!loginWithGoogle || (googleLoginClientId.trim().length > 0 && googleLoginClientSecret.trim().length > 0))
       case 'google-integration':
         return true
       case 'master-data':
@@ -719,6 +737,90 @@ export default function SetupWizard() {
           <Switch checked={loginWithGoogle} onCheckedChange={setLoginWithGoogle} />
         </div>
       </div>
+
+      {/* Google OAuth Credentials - shown when Google login is enabled */}
+      {loginWithGoogle && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          exit={{ opacity: 0, height: 0 }}
+          className="space-y-4"
+        >
+          {/* Setup Instructions */}
+          <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50/50 p-3 dark:border-blue-800 dark:bg-blue-900/10">
+            <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+            <div className="text-sm text-blue-700 dark:text-blue-300">
+              <p className="font-medium mb-1">Cara Mengatur Login Google:</p>
+              <ol className="list-decimal list-inside space-y-0.5 text-xs text-blue-600 dark:text-blue-400">
+                <li>Buka <a href="https://console.cloud.google.com" target="_blank" rel="noopener noreferrer" className="underline inline-flex items-center gap-0.5">Google Cloud Console <ExternalLink className="w-2.5 h-2.5" /></a></li>
+                <li>Buat project baru atau pilih project yang ada</li>
+                <li>Buka menu <strong>APIs & Services → Credentials</strong></li>
+                <li>Klik <strong>Create Credentials → OAuth client ID</strong></li>
+                <li>Pilih <strong>Web application</strong> sebagai Application type</li>
+                <li>Tambahkan <strong>Authorized redirect URI</strong>: <code className="bg-blue-100 dark:bg-blue-800/50 px-1 rounded text-[11px]">{typeof window !== 'undefined' ? window.location.origin : ''}/api/auth/callback/google</code></li>
+                <li>Copy <strong>Client ID</strong> dan <strong>Client Secret</strong> ke form di bawah</li>
+              </ol>
+            </div>
+          </div>
+
+          <Card className="border-border/60">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                <Key className="w-4 h-4" />
+                Kredensial Google OAuth
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center gap-1.5">
+                  <Key className="w-3 h-3 text-muted-foreground" />
+                  <Label className="text-sm font-medium">Google Client ID *</Label>
+                </div>
+                <Input
+                  placeholder="123456789-abc.apps.googleusercontent.com"
+                  value={googleLoginClientId}
+                  onChange={(e) => setGoogleLoginClientId(e.target.value)}
+                  className="text-sm"
+                />
+                <p className="text-[11px] text-muted-foreground">Dari Google Cloud Console → APIs & Services → Credentials</p>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-1.5">
+                  <Key className="w-3 h-3 text-muted-foreground" />
+                  <Label className="text-sm font-medium">Google Client Secret *</Label>
+                </div>
+                <div className="relative">
+                  <Input
+                    type={showGoogleClientSecret ? 'text' : 'password'}
+                    placeholder="GOCSPX-xxxxxxxxxxxxxxxxx"
+                    value={googleLoginClientSecret}
+                    onChange={(e) => setGoogleLoginClientSecret(e.target.value)}
+                    className="text-sm pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowGoogleClientSecret(!showGoogleClientSecret)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showGoogleClientSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <p className="text-[11px] text-muted-foreground">Dari Google Cloud Console → APIs & Services → Credentials</p>
+              </div>
+
+              {googleLoginClientId && googleLoginClientSecret && (
+                <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50/50 p-2.5 dark:border-emerald-800 dark:bg-emerald-900/10">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                    Google OAuth terkonfigurasi dengan benar
+                  </span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
 
       {!loginWithNip && !loginWithGoogle && (
         <div className="flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/5 p-3">
