@@ -33,14 +33,14 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Password salah");
         }
 
-        // Log activity
-        await db.activityLog.create({
+        // Log activity (fire and forget to avoid blocking the response)
+        db.activityLog.create({
           data: {
             userId: user.id,
             action: "LOGIN",
             details: "User berhasil login",
           },
-        });
+        }).catch(() => {});
 
         return {
           id: user.id,
