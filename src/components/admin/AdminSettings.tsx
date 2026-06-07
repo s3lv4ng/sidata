@@ -122,7 +122,7 @@ const driveSettingsConfig = [
     description: 'Email Service Account Google Cloud untuk mengakses Google Drive API',
     icon: Mail,
     type: 'input' as const,
-    sensitive: true,
+    sensitive: false,
   },
   {
     key: 'googleDrivePrivateKey',
@@ -168,6 +168,8 @@ export default function AdminSettings() {
   const [showDriveCredentials, setShowDriveCredentials] = useState(false)
   const [showGoogleClientSecret, setShowGoogleClientSecret] = useState(false)
   const [oauthInstructionsOpen, setOauthInstructionsOpen] = useState(false)
+  const [editingPrivateKey, setEditingPrivateKey] = useState(false)
+  const [editingClientSecret, setEditingClientSecret] = useState(false)
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -238,6 +240,14 @@ export default function AdminSettings() {
         const label = [...settingsConfig, ...driveSettingsConfig].find((c) => c.key === key)?.label || key
         addNotification(`"${label}" berhasil disimpan`, 'success')
 
+        // Reset private key editing state after save
+        if (key === 'googleDrivePrivateKey') {
+          setEditingPrivateKey(false)
+        }
+        if (key === 'googleLoginClientSecret') {
+          setEditingClientSecret(false)
+        }
+
         // If we saved a Drive setting, recheck connection
         if (driveSettingsConfig.some((c) => c.key === key)) {
           checkDriveStatus()
@@ -280,6 +290,14 @@ export default function AdminSettings() {
       if (res.ok) {
         setOriginalSettings({ ...settings })
         addNotification('Semua pengaturan berhasil disimpan', 'success')
+
+        // Reset private key editing state after save
+        if (changedSettings.googleDrivePrivateKey !== undefined) {
+          setEditingPrivateKey(false)
+        }
+        if (changedSettings.googleLoginClientSecret !== undefined) {
+          setEditingClientSecret(false)
+        }
 
         // If we saved Drive settings, recheck connection
         if (configList === driveSettingsConfig) {
@@ -703,35 +721,51 @@ export default function AdminSettings() {
                             Diubah
                           </Badge>
                         )}
-                        {!!originalSettings.googleLoginClientSecret && !isChanged('googleLoginClientSecret') && (
+                        {!!originalSettings.googleLoginClientSecret && !isChanged('googleLoginClientSecret') && !editingClientSecret && (
                           <Badge variant="outline" className="text-[9px] font-medium bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800">
                             Terisi
                           </Badge>
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground">OAuth Client Secret dari Google Cloud Console</p>
-                      <div className="relative">
-                        <Input
-                          type={showGoogleClientSecret ? 'text' : 'password'}
-                          placeholder="GOCSPX-xxxxxxxxxxxxxxxxx"
-                          value={originalSettings.googleLoginClientSecret && !isChanged('googleLoginClientSecret') ? '••••••••••••••••' : (settings.googleLoginClientSecret || '')}
-                          onChange={(e) => handleChange('googleLoginClientSecret', e.target.value)}
-                          onFocus={() => {
-                            if (originalSettings.googleLoginClientSecret && settings.googleLoginClientSecret === originalSettings.googleLoginClientSecret) {
+                      {originalSettings.googleLoginClientSecret && !editingClientSecret && !isChanged('googleLoginClientSecret') ? (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 rounded-md border border-border bg-muted/30 px-3 py-2">
+                            <Key className="w-4 h-4 text-muted-foreground shrink-0" />
+                            <span className="text-sm text-muted-foreground font-mono">••••••••••••••••</span>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1.5 text-xs"
+                            onClick={() => {
+                              setEditingClientSecret(true)
                               handleChange('googleLoginClientSecret', '')
-                            }
-                          }}
-                          className={`pr-10 ${isChanged('googleLoginClientSecret') ? 'border-amber-300 focus-visible:ring-amber-200' : ''}`}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowGoogleClientSecret(!showGoogleClientSecret)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                          tabIndex={-1}
-                        >
-                          {showGoogleClientSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      </div>
+                            }}
+                          >
+                            <Key className="w-3 h-3" />
+                            Ganti Client Secret
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="relative">
+                          <Input
+                            type={showGoogleClientSecret ? 'text' : 'password'}
+                            placeholder="GOCSPX-xxxxxxxxxxxxxxxxx"
+                            value={settings.googleLoginClientSecret || ''}
+                            onChange={(e) => handleChange('googleLoginClientSecret', e.target.value)}
+                            className={`pr-10 ${isChanged('googleLoginClientSecret') ? 'border-amber-300 focus-visible:ring-amber-200' : ''}`}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowGoogleClientSecret(!showGoogleClientSecret)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                            tabIndex={-1}
+                          >
+                            {showGoogleClientSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      )}
                     </div>
                     <Button
                       size="sm"
@@ -799,6 +833,9 @@ export default function AdminSettings() {
                         })
                         if (res.ok) {
                           setOriginalSettings({ ...settings })
+                          if (loginSettings.googleLoginClientSecret !== undefined) {
+                            setEditingClientSecret(false)
+                          }
                           addNotification('Pengaturan login berhasil disimpan', 'success')
                         }
                       } catch {
@@ -937,6 +974,7 @@ export default function AdminSettings() {
                 const savingField = saving.has(config.key)
                 const isPrivateKey = config.key === 'googleDrivePrivateKey'
                 const hasExistingValue = !!originalSettings[config.key]
+                const isEditingKey = isPrivateKey && editingPrivateKey
 
                 return (
                   <div key={config.key}>
@@ -954,36 +992,50 @@ export default function AdminSettings() {
                               Diubah
                             </Badge>
                           )}
-                          {config.sensitive && hasExistingValue && !changed && (
+                          {isPrivateKey && hasExistingValue && !changed && !editingPrivateKey && (
+                            <Badge variant="outline" className="text-[9px] font-medium bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800">
+                              Terisi
+                            </Badge>
+                          )}
+                          {!isPrivateKey && config.sensitive && hasExistingValue && !changed && (
                             <Badge variant="outline" className="text-[9px] font-medium bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800">
                               Terisi
                             </Badge>
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground">{config.description}</p>
-                        {config.type === 'textarea' ? (
+                        {isPrivateKey && hasExistingValue && !isEditingKey && !changed ? (
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2 rounded-md border border-border bg-muted/30 px-3 py-2">
+                              <Key className="w-4 h-4 text-muted-foreground shrink-0" />
+                              <span className="text-sm text-muted-foreground font-mono">•••••••••••••••••••••••••••••••••••••••••••</span>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1.5 text-xs"
+                              onClick={() => {
+                                setEditingPrivateKey(true)
+                                handleChange('googleDrivePrivateKey', '')
+                              }}
+                            >
+                              <Key className="w-3 h-3" />
+                              Ganti Private Key
+                            </Button>
+                          </div>
+                        ) : config.type === 'textarea' ? (
                           <Textarea
                             placeholder={config.placeholder}
-                            value={isPrivateKey && hasExistingValue && !changed ? '••••••••••••••••' : (settings[config.key] || '')}
+                            value={settings[config.key] || ''}
                             onChange={(e) => handleChange(config.key, e.target.value)}
-                            onFocus={() => {
-                              if (isPrivateKey && hasExistingValue && settings[config.key] === originalSettings[config.key]) {
-                                handleChange(config.key, '')
-                              }
-                            }}
                             rows={4}
                             className={`resize-y font-mono text-xs overflow-x-auto break-all ${changed ? 'border-amber-300 focus-visible:ring-amber-200' : ''}`}
                           />
                         ) : (
                           <Input
                             placeholder={config.placeholder}
-                            value={isPrivateKey && hasExistingValue && !changed ? '••••••••••••••••' : (settings[config.key] || '')}
+                            value={settings[config.key] || ''}
                             onChange={(e) => handleChange(config.key, e.target.value)}
-                            onFocus={() => {
-                              if (config.sensitive && hasExistingValue && settings[config.key] === originalSettings[config.key]) {
-                                handleChange(config.key, '')
-                              }
-                            }}
                             className={changed ? 'border-amber-300 focus-visible:ring-amber-200' : ''}
                           />
                         )}

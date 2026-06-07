@@ -126,3 +126,32 @@ Stage Summary:
 - Google Client Secret field has eye toggle for masking
 - Configuration status warning banner shows when credentials incomplete
 - Created cron job for continuous development (every 15 minutes)
+
+---
+Task ID: 2
+Agent: main
+Task: Fix Service Account Email and Private Key cannot be saved
+
+Work Log:
+- Root cause: Both fields had `sensitive: true` and `onFocus` auto-clear handlers that would erase the value when clicked
+- Service Account Email was incorrectly marked as `sensitive: true` — it's just an email, not a secret
+- Private Key had auto-clear on focus — users would accidentally lose their saved key by clicking on it
+- Google Client Secret had the same auto-clear on focus issue
+- Fixed Service Account Email: changed `sensitive: true` to `sensitive: false` — now editable directly without masking
+- Fixed Private Key: replaced auto-clear with explicit "Ganti Private Key" button
+  - Shows masked dots with key icon when not editing
+  - User must click "Ganti Private Key" to enter editing mode
+  - After save, returns to masked display mode
+- Fixed Google Client Secret: replaced auto-clear with explicit "Ganti Client Secret" button
+  - Same pattern as Private Key — masked display with explicit replace action
+  - After save, returns to masked display mode
+- Added `editingPrivateKey` and `editingClientSecret` state variables
+- Added reset logic for both editing states in handleSaveOne, handleSaveAll, and login settings save handler
+- Verified with agent-browser: email can be edited and saved directly, Private Key shows "Ganti" button, Client Secret shows "Ganti" button
+- Lint passes with 0 errors (only pre-existing custom-server.js warnings)
+
+Stage Summary:
+- Service Account Email now editable and saveable directly (no auto-clear)
+- Private Key has safe "Ganti" button workflow (no accidental data loss)
+- Google Client Secret has safe "Ganti" button workflow (no accidental data loss)
+- All sensitive fields now require explicit action to replace values
