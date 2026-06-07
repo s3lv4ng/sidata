@@ -162,6 +162,15 @@ export default function AdminSettings() {
     folder?: { name: string; id: string }
     files?: any[]
     message: string
+    error?: {
+      message: string
+      code?: number
+      reason?: string
+      isApiDisabled?: boolean
+      isAuthError?: boolean
+      isNotFoundError?: boolean
+      isPermissionError?: boolean
+    }
   } | null>(null)
   const [testingDrive, setTestingDrive] = useState(false)
   const [driveFilesDialogOpen, setDriveFilesDialogOpen] = useState(false)
@@ -924,9 +933,72 @@ export default function AdminSettings() {
               )}
 
               {driveStatus && !driveStatus.connected && driveStatus.configured && (
-                <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50/50 p-3 dark:border-red-800 dark:bg-red-900/10">
-                  <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0" />
-                  <p className="text-sm text-red-700 dark:text-red-300">{driveStatus.message}</p>
+                <div className="space-y-2">
+                  <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50/50 p-3 dark:border-red-800 dark:bg-red-900/10">
+                    <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-red-700 dark:text-red-300 font-medium">Koneksi Gagal</p>
+                      <p className="text-xs text-red-600/80 dark:text-red-400/80 mt-1">{driveStatus.message}</p>
+                    </div>
+                  </div>
+                  {driveStatus.error?.isApiDisabled && (
+                    <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50/50 p-3 dark:border-amber-800 dark:bg-amber-900/10">
+                      <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                      <div className="text-xs text-amber-700 dark:text-amber-300 space-y-1.5">
+                        <p className="font-medium">Cara Mengaktifkan Google Drive API:</p>
+                        <ol className="list-decimal list-inside space-y-0.5">
+                          <li>Buka <a href="https://console.cloud.google.com/apis/library/drive.googleapis.com" target="_blank" rel="noopener noreferrer" className="underline inline-flex items-center gap-0.5 font-medium">Google Drive API <ExternalLink className="w-2.5 h-2.5" /></a></li>
+                          <li>Pastikan project yang benar dipilih di bagian atas</li>
+                          <li>Klik <strong>Aktifkan/Enable</strong></li>
+                          <li>Tunggu beberapa menit hingga propagasi selesai</li>
+                          <li>Klik <strong>Tes Koneksi</strong> lagi di atas</li>
+                        </ol>
+                      </div>
+                    </div>
+                  )}
+                  {driveStatus.error?.isAuthError && (
+                    <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50/50 p-3 dark:border-amber-800 dark:bg-amber-900/10">
+                      <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                      <div className="text-xs text-amber-700 dark:text-amber-300 space-y-1.5">
+                        <p className="font-medium">Tips Memperbaiki Kredensial:</p>
+                        <ol className="list-decimal list-inside space-y-0.5">
+                          <li>Pastikan Service Account Email sesuai dengan yang ada di Google Cloud Console</li>
+                          <li>Pastikan Private Key di-copy utuh dari file JSON kredensial</li>
+                          <li>Private key harus dimulai dengan <code className="bg-amber-100 dark:bg-amber-900/50 px-1 rounded">-----BEGIN PRIVATE KEY-----</code></li>
+                          <li>Private key harus diakhiri dengan <code className="bg-amber-100 dark:bg-amber-900/50 px-1 rounded">-----END PRIVATE KEY-----</code></li>
+                          <li>Jika masih gagal, buat Service Account key baru dan download ulang</li>
+                        </ol>
+                      </div>
+                    </div>
+                  )}
+                  {driveStatus.error?.isPermissionError && (
+                    <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50/50 p-3 dark:border-amber-800 dark:bg-amber-900/10">
+                      <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                      <div className="text-xs text-amber-700 dark:text-amber-300 space-y-1.5">
+                        <p className="font-medium">Cara Memberikan Akses Folder:</p>
+                        <ol className="list-decimal list-inside space-y-0.5">
+                          <li>Buka Google Drive dan cari folder target</li>
+                          <li>Klik kanan folder → <strong>Bagikan/Share</strong></li>
+                          <li>Tambahkan email Service Account: <code className="bg-amber-100 dark:bg-amber-900/50 px-1 rounded">{settings.googleDriveClientEmail || 'email-sa@project.iam.gserviceaccount.com'}</code></li>
+                          <li>Beri akses <strong>Editor</strong></li>
+                          <li>Klik <strong>Kirim/Send</strong></li>
+                        </ol>
+                      </div>
+                    </div>
+                  )}
+                  {driveStatus.error?.isNotFoundError && (
+                    <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50/50 p-3 dark:border-amber-800 dark:bg-amber-900/10">
+                      <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                      <div className="text-xs text-amber-700 dark:text-amber-300 space-y-1.5">
+                        <p className="font-medium">Folder ID Tidak Ditemukan</p>
+                        <ol className="list-decimal list-inside space-y-0.5">
+                          <li>Pastikan Folder ID benar (dari URL folder Google Drive)</li>
+                          <li>Format URL: <code className="bg-amber-100 dark:bg-amber-900/50 px-1 rounded">drive.google.com/drive/folders/<strong>FOLDER_ID</strong></code></li>
+                          <li>Pastikan folder sudah dibagikan ke Service Account</li>
+                        </ol>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

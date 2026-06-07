@@ -108,12 +108,13 @@ export async function POST(request: NextRequest) {
         // Use Service Account to write to Google Sheets
         const { google } = await import('googleapis')
 
-        const auth = new google.auth.JWT(
-          driveSettingsMap.googleDriveClientEmail,
-          undefined,
-          driveSettingsMap.googleDrivePrivateKey.replace(/\\n/g, '\n'),
-          ['https://www.googleapis.com/auth/spreadsheets']
-        )
+        const auth = new google.auth.GoogleAuth({
+          credentials: {
+            client_email: driveSettingsMap.googleDriveClientEmail,
+            private_key: driveSettingsMap.googleDrivePrivateKey.replace(/\\n/g, '\n'),
+          },
+          scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+        })
 
         const sheets = google.sheets({ version: 'v4', auth })
 
@@ -207,12 +208,13 @@ export async function POST(request: NextRequest) {
 
       const { google } = await import('googleapis')
 
-      const auth = new google.auth.JWT(
-        driveSettingsMap.googleDriveClientEmail,
-        undefined,
-        driveSettingsMap.googleDrivePrivateKey.replace(/\\n/g, '\n'),
-        ['https://www.googleapis.com/auth/spreadsheets']
-      )
+      const auth = new google.auth.GoogleAuth({
+        credentials: {
+          client_email: driveSettingsMap.googleDriveClientEmail,
+          private_key: driveSettingsMap.googleDrivePrivateKey.replace(/\\n/g, '\n'),
+        },
+        scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+      })
 
       const sheets = google.sheets({ version: 'v4', auth })
 

@@ -155,3 +155,44 @@ Stage Summary:
 - Private Key has safe "Ganti" button workflow (no accidental data loss)
 - Google Client Secret has safe "Ganti" button workflow (no accidental data loss)
 - All sensitive fields now require explicit action to replace values
+
+---
+Task ID: 3
+Agent: main
+Task: Fix Google Drive connection failure - "koneksi gagal padahal sudah benar"
+
+Work Log:
+- Investigated the actual error by checking dev.log: `Error getting folder info: Method doesn't allow unregistered callers`
+- Tested Google Drive API directly with JWT auth → same generic error
+- Switched to GoogleAuth approach → revealed the REAL error: "Google Drive API has not been used in project before or it is disabled"
+- The root cause: Google Drive API is NOT enabled in the user's Google Cloud project
+- The old code just showed generic "Koneksi gagal" message, not helpful to the user
+- Fixed google-drive.ts:
+  - Replaced `google.auth.JWT` with `google.auth.GoogleAuth` (recommended modern approach, better error messages)
+  - Added `parseDriveError()` function that detects specific Google API error patterns
+  - Added `DriveError` interface with `isApiDisabled`, `isAuthError`, `isNotFoundError`, `isPermissionError` flags
+  - Added `testDriveConnection()` function that returns detailed error info including parsed DriveError
+  - Changed `getFolderInfo()` to throw errors instead of catching silently (allows caller to handle)
+- Fixed /api/drive/route.ts:
+  - Uses new `testDriveConnection()` function
+  - Returns `error` object with detailed information for the frontend
+- Fixed AdminSettings.tsx:
+  - Updated `driveStatus` state type to include `error` field with DriveError properties
+  - Replaced generic error display with detailed error section showing:
+    - "Koneksi Gagal" title + specific error message
+    - Context-specific fix instructions based on error type:
+      - API Disabled: Step-by-step guide with link to enable Google Drive API
+      - Auth Error: Tips for fixing credentials (email, private key format)
+      - Permission Error: Guide for sharing folder with Service Account email
+      - Not Found Error: Guide for verifying Folder ID
+- Fixed /api/google-sheets/route.ts:
+  - Replaced both `google.auth.JWT` instances with `google.auth.GoogleAuth` for consistency
+- Verified with agent-browser: Google Drive tab now shows specific error "Google Drive API belum diaktifkan" with step-by-step fix instructions
+- API endpoint /api/drive returns detailed error: `{ configured: true, connected: false, error: { isApiDisabled: true, reason: "SERVICE_DISABLED" } }`
+
+Stage Summary:
+- Google Drive connection test now gives SPECIFIC, ACTIONABLE error messages instead of generic "Koneksi gagal"
+- Switched from JWT to GoogleAuth (better error reporting, recommended by Google)
+- Frontend shows context-specific fix instructions based on error type
+- Google Sheets API also updated to use GoogleAuth
+- The actual issue for this user: Google Drive API needs to be enabled in Google Cloud Console

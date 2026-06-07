@@ -8,6 +8,84 @@ interface DriveConfig {
   folderId: string
 }
 
+// Error type for detailed Google API errors
+export interface DriveError {
+  message: string
+  code?: number
+  reason?: string
+  isApiDisabled?: boolean
+  isAuthError?: boolean
+  isNotFoundError?: boolean
+  isPermissionError?: boolean
+}
+
+// Parse Google API error into a user-friendly DriveError
+function parseDriveError(error: any): DriveError {
+  const errMsg = error?.message || String(error)
+  const code = error?.code || error?.response?.status
+
+  // Check for specific error patterns
+  if (errMsg.includes('has not been used') || errMsg.includes('is disabled') || errMsg.includes('SERVICE_DISABLED')) {
+    return {
+      message: 'Google Drive API belum diaktifkan di project Google Cloud Anda. Aktifkan di Google Cloud Console → APIs & Services → Library → Google Drive API.',
+      code,
+      reason: 'SERVICE_DISABLED',
+      isApiDisabled: true,
+    }
+  }
+
+  if (errMsg.includes('invalid_grant') || errMsg.includes('Invalid JWT') || errMsg.includes('invalid_client')) {
+    return {
+      message: 'Kredensial Service Account tidak valid. Periksa kembali Service Account Email dan Private Key.',
+      code,
+      reason: 'INVALID_CREDENTIALS',
+      isAuthError: true,
+    }
+  }
+
+  if (errMsg.includes('File not found') || errMsg.includes('notFound')) {
+    return {
+      message: 'Folder ID tidak ditemukan. Pastikan Folder ID benar dan folder sudah dibagikan ke Service Account.',
+      code,
+      reason: 'NOT_FOUND',
+      isNotFoundError: true,
+    }
+  }
+
+  if (errMsg.includes('insufficientPermissions') || errMsg.includes('forbidden') || errMsg.includes('ACCESS_DENIED')) {
+    return {
+      message: 'Service Account tidak memiliki akses ke folder. Bagikan folder ke email Service Account dengan akses Editor.',
+      code,
+      reason: 'PERMISSION_DENIED',
+      isPermissionError: true,
+    }
+  }
+
+  if (errMsg.includes('unregistered') || errMsg.includes('unregistered callers')) {
+    return {
+      message: 'Google Drive API belum diaktifkan di project Anda. Aktifkan di Google Cloud Console → APIs & Services.',
+      code,
+      reason: 'API_NOT_ENABLED',
+      isApiDisabled: true,
+    }
+  }
+
+  if (errMsg.includes('ENOTFOUND') || errMsg.includes('ECONNREFUSED') || errMsg.includes('network')) {
+    return {
+      message: 'Tidak dapat terhubung ke server Google. Periksa koneksi internet.',
+      code,
+      reason: 'NETWORK_ERROR',
+    }
+  }
+
+  // Generic error
+  return {
+    message: `Koneksi ke Google Drive gagal: ${errMsg}`,
+    code,
+    reason: 'UNKNOWN',
+  }
+}
+
 // Get Google Drive configuration from database settings
 export async function getDriveConfig(): Promise<DriveConfig | null> {
   try {
@@ -43,14 +121,15 @@ export async function isDriveConfigured(): Promise<boolean> {
   return config !== null
 }
 
-// Create an authenticated Google Drive client
+// Create an authenticated Google Drive client using GoogleAuth (recommended approach)
 function createDriveClient(config: DriveConfig) {
-  const auth = new google.auth.JWT(
-    config.clientEmail,
-    undefined,
-    config.privateKey,
-    ['https://www.googleapis.com/auth/drive.file']
-  )
+  const auth = new google.auth.GoogleAuth({
+    credentials: {
+      client_email: config.clientEmail,
+      private_key: config.privateKey,
+    },
+    scopes: ['https://www.googleapis.com/auth/drive.file'],
+  })
 
   return google.drive({ version: 'v3', auth })
 }
@@ -150,21 +229,68 @@ export async function listDriveFiles(maxResults: number = 10): Promise<any[] | n
   }
 }
 
-// Get folder info
-export async function getFolderInfo(): Promise<{ name: string; id: string } | null> {
+// Get folder info - returns folder data or throws with detailed error
+export async function getFolderInfo(): Promise<{ name: string; id: string }> {
+  const config = await getDriveConfig()
+  if (!config) throw new Error('Google Drive belum dikonfigurasi')
+
+  const drive = createDriveClient(config)
+  const response = await drive.files.get({
+    fileId: config.folderId,
+    fields: 'id, name',
+  })
+
+  return response.data as { name: string; id: string }
+}
+
+// Test connection - returns detailed result with error info
+export async function testDriveConnection(): Promise<{
+  configured: boolean
+  connected: boolean
+  folder?: { name: string; id: string }
+  files?: any[]
+  error?: DriveError
+  message: string
+}> {
   try {
     const config = await getDriveConfig()
-    if (!config) return null
+    if (!config) {
+      return {
+        configured: false,
+        connected: false,
+        message: 'Google Drive belum dikonfigurasi. Silakan atur Service Account Email, Private Key, dan Folder ID.',
+      }
+    }
 
-    const drive = createDriveClient(config)
-    const response = await drive.files.get({
-      fileId: config.folderId,
-      fields: 'id, name',
-    })
+    // Try to get folder info to verify connection
+    try {
+      const folderInfo = await getFolderInfo()
 
-    return response.data as { name: string; id: string }
+      // List recent files
+      const files = await listDriveFiles(10)
+
+      return {
+        configured: true,
+        connected: true,
+        folder: folderInfo,
+        files: files || [],
+        message: 'Google Drive terhubung dengan sukses.',
+      }
+    } catch (error: any) {
+      const driveError = parseDriveError(error)
+      return {
+        configured: true,
+        connected: false,
+        error: driveError,
+        message: driveError.message,
+      }
+    }
   } catch (error: any) {
-    console.error('Error getting folder info:', error?.message || error)
-    return null
+    return {
+      configured: false,
+      connected: false,
+      error: parseDriveError(error),
+      message: `Error: ${error.message || 'Koneksi gagal'}`,
+    }
   }
 }
