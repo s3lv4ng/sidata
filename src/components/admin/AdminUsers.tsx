@@ -479,24 +479,24 @@ export default function AdminUsers() {
       </Card>
 
       {/* User Table */}
-      <Card className="border-border/60">
-        <CardContent className="p-0">
-          {filteredUsers.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16">
-              <UserCog className="w-12 h-12 text-muted-foreground/20 mb-4" />
-              <p className="text-sm font-medium text-muted-foreground">
-                {searchQuery || roleFilter !== 'all'
-                  ? 'Tidak ada user yang sesuai filter'
-                  : 'Belum ada user terdaftar'}
-              </p>
-              <p className="text-xs text-muted-foreground/60 mt-1">
-                {searchQuery || roleFilter !== 'all'
-                  ? 'Coba ubah filter atau kata kunci pencarian'
-                  : 'Klik "Tambah User" untuk menambahkan user baru'}
-              </p>
-            </div>
-          ) : (
-            <ScrollArea className="max-h-[calc(100vh-420px)]">
+      <Card className="border-border/60 flex flex-col max-h-[calc(100vh-340px)]">
+        {filteredUsers.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16">
+            <UserCog className="w-12 h-12 text-muted-foreground/20 mb-4" />
+            <p className="text-sm font-medium text-muted-foreground">
+              {searchQuery || roleFilter !== 'all'
+                ? 'Tidak ada user yang sesuai filter'
+                : 'Belum ada user terdaftar'}
+            </p>
+            <p className="text-xs text-muted-foreground/60 mt-1">
+              {searchQuery || roleFilter !== 'all'
+                ? 'Coba ubah filter atau kata kunci pencarian'
+                : 'Klik "Tambah User" untuk menambahkan user baru'}
+            </p>
+          </div>
+        ) : (
+          <>
+            <ScrollArea className="flex-1">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -634,57 +634,59 @@ export default function AdminUsers() {
                 </TableBody>
               </Table>
             </ScrollArea>
-          )}
-        </CardContent>
-      </Card>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-muted-foreground">
-            Menampilkan {(currentPage - 1) * ITEMS_PER_PAGE + 1}
-            –{Math.min(currentPage * ITEMS_PER_PAGE, filteredUsers.length)} dari{' '}
-            {filteredUsers.length} data
-          </p>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage((p) => p - 1)}
-              className="h-8 text-xs"
-            >
-              Sebelumnya
-            </Button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1)
-              .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
-              .map((page, idx, arr) => (
-                <span key={page} className="flex items-center">
-                  {idx > 0 && arr[idx - 1] !== page - 1 && (
-                    <span className="px-1 text-xs text-muted-foreground">...</span>
-                  )}
-                  <Button
-                    variant={currentPage === page ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setCurrentPage(page)}
-                    className="h-8 w-8 text-xs p-0"
-                  >
-                    {page}
-                  </Button>
-                </span>
-              ))}
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage((p) => p + 1)}
-              className="h-8 text-xs"
-            >
-              Berikutnya
-            </Button>
-          </div>
-        </div>
-      )}
+            {/* Pagination - outside ScrollArea, pinned to bottom */}
+            {totalPages > 1 && (
+              <div className="border-t bg-muted/20 px-4 py-3 shrink-0">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground">
+                    Menampilkan {(currentPage - 1) * ITEMS_PER_PAGE + 1}
+                    –{Math.min(currentPage * ITEMS_PER_PAGE, filteredUsers.length)} dari{' '}
+                    {filteredUsers.length} data
+                  </p>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={currentPage === 1}
+                      onClick={() => setCurrentPage((p) => p - 1)}
+                      className="h-8 text-xs"
+                    >
+                      Sebelumnya
+                    </Button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                      .map((page, idx, arr) => (
+                        <span key={page} className="flex items-center">
+                          {idx > 0 && arr[idx - 1] !== page - 1 && (
+                            <span className="px-1 text-xs text-muted-foreground">...</span>
+                          )}
+                          <Button
+                            variant={currentPage === page ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setCurrentPage(page)}
+                            className="h-8 w-8 text-xs p-0"
+                          >
+                            {page}
+                          </Button>
+                        </span>
+                      ))}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={currentPage === totalPages}
+                      onClick={() => setCurrentPage((p) => p + 1)}
+                      className="h-8 text-xs"
+                    >
+                      Berikutnya
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </Card>
 
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

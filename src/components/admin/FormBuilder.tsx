@@ -62,6 +62,12 @@ import {
   TrendingUp as TrendingUpIcon,
   Building2,
   ClipboardCheck,
+  Mail,
+  Phone,
+  Link,
+  Clock,
+  Star,
+  ImageIcon,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { id as idLocale } from 'date-fns/locale'
@@ -75,6 +81,7 @@ interface FormFieldData {
   required: boolean
   options: string[]
   order: number
+  placeholder?: string
 }
 
 type FieldType =
@@ -86,6 +93,13 @@ type FieldType =
   | 'checkbox'
   | 'file_upload'
   | 'dropdown'
+  | 'multi_upload'
+  | 'email'
+  | 'phone'
+  | 'url'
+  | 'time'
+  | 'rating'
+  | 'image_upload'
 
 interface FormDetail {
   id: string
@@ -103,6 +117,7 @@ interface FormDetail {
     type: string
     required: boolean
     options: string | null
+    placeholder: string | null
     order: number
   }>
 }
@@ -118,6 +133,13 @@ const FIELD_TYPES: Array<{ value: FieldType; label: string; icon: React.ElementT
   { value: 'checkbox', label: 'Checkbox', icon: CheckSquare },
   { value: 'file_upload', label: 'Upload File', icon: Upload },
   { value: 'dropdown', label: 'Dropdown', icon: ChevronDownIcon },
+  { value: 'multi_upload', label: 'Multi Upload', icon: Upload },
+  { value: 'email', label: 'Email', icon: Mail },
+  { value: 'phone', label: 'Telepon', icon: Phone },
+  { value: 'url', label: 'URL / Link', icon: Link },
+  { value: 'time', label: 'Waktu', icon: Clock },
+  { value: 'rating', label: 'Rating', icon: Star },
+  { value: 'image_upload', label: 'Upload Gambar', icon: ImageIcon },
 ]
 
 const CHOICE_TYPES: FieldType[] = ['multiple_choice', 'checkbox', 'dropdown']
@@ -223,6 +245,7 @@ function createEmptyField(order: number): FormFieldData {
     required: false,
     options: [],
     order,
+    placeholder: '',
   }
 }
 
@@ -267,6 +290,7 @@ export default function FormBuilder() {
                 type: f.type as FieldType,
                 required: f.required,
                 options: f.options ? JSON.parse(f.options) : [],
+                placeholder: f.placeholder || '',
                 order: idx,
               }))
             : [createEmptyField(0)]
@@ -382,6 +406,7 @@ export default function FormBuilder() {
           type: f.type,
           required: f.required,
           options: CHOICE_TYPES.includes(f.type) && f.options.length > 0 ? f.options : null,
+          placeholder: f.placeholder?.trim() || null,
         })),
         userId,
       }
@@ -845,6 +870,17 @@ function FieldEditor({
         </Badge>
       </div>
 
+      {/* Placeholder input */}
+      <div className="flex items-center gap-2 pl-7">
+        <Label className="text-[11px] text-muted-foreground w-12 shrink-0">Placeholder</Label>
+        <Input
+          placeholder="Teks placeholder..."
+          value={field.placeholder || ''}
+          onChange={(e) => onUpdate({ placeholder: e.target.value })}
+          className="h-8 text-xs"
+        />
+      </div>
+
       {/* Options editor for choice types */}
       {isChoiceType && (
         <div className="pl-7 space-y-2">
@@ -896,12 +932,14 @@ function FieldEditor({
 // ─── Preview Renderer ───────────────────────────────────────────────────────
 
 function renderPreviewField(field: FormFieldData) {
+  const ph = (defaultText: string) => field.placeholder || defaultText
+
   switch (field.type) {
     case 'short_text':
       return (
         <Input
           disabled
-          placeholder="Isian singkat..."
+          placeholder={ph('Isian singkat...')}
           className="h-8 text-xs bg-muted/30"
         />
       )
@@ -909,7 +947,7 @@ function renderPreviewField(field: FormFieldData) {
       return (
         <Textarea
           disabled
-          placeholder="Paragraf..."
+          placeholder={ph('Paragraf...')}
           rows={3}
           className="text-xs bg-muted/30 resize-none"
         />
@@ -919,7 +957,7 @@ function renderPreviewField(field: FormFieldData) {
         <Input
           disabled
           type="number"
-          placeholder="0"
+          placeholder={ph('0')}
           className="h-8 text-xs bg-muted/30"
         />
       )
@@ -965,7 +1003,67 @@ function renderPreviewField(field: FormFieldData) {
       return (
         <div className="border-2 border-dashed border-muted-foreground/20 rounded-lg p-4 text-center">
           <Upload className="w-5 h-5 text-muted-foreground/30 mx-auto mb-1" />
-          <p className="text-[11px] text-muted-foreground/50">Upload file</p>
+          <p className="text-[11px] text-muted-foreground/50">{ph('Upload file')}</p>
+        </div>
+      )
+    case 'multi_upload':
+      return (
+        <div className="border-2 border-dashed border-muted-foreground/20 rounded-lg p-4 text-center">
+          <Upload className="w-5 h-5 text-muted-foreground/30 mx-auto mb-1" />
+          <p className="text-[11px] text-muted-foreground/50">{ph('Upload beberapa file')}</p>
+        </div>
+      )
+    case 'email':
+      return (
+        <Input
+          disabled
+          type="email"
+          placeholder={ph('email@contoh.com')}
+          className="h-8 text-xs bg-muted/30"
+        />
+      )
+    case 'phone':
+      return (
+        <Input
+          disabled
+          type="tel"
+          placeholder={ph('08xxxxxxxxxx')}
+          className="h-8 text-xs bg-muted/30"
+        />
+      )
+    case 'url':
+      return (
+        <Input
+          disabled
+          type="url"
+          placeholder={ph('https://...')}
+          className="h-8 text-xs bg-muted/30"
+        />
+      )
+    case 'time':
+      return (
+        <Input
+          disabled
+          type="time"
+          className="h-8 text-xs bg-muted/30"
+        />
+      )
+    case 'rating':
+      return (
+        <div className="flex items-center gap-1">
+          {[1, 2, 3, 4, 5].map((star) => (
+            <Star
+              key={star}
+              className="w-5 h-5 text-muted-foreground/30"
+            />
+          ))}
+        </div>
+      )
+    case 'image_upload':
+      return (
+        <div className="border-2 border-dashed border-muted-foreground/20 rounded-lg p-4 text-center">
+          <ImageIcon className="w-5 h-5 text-muted-foreground/30 mx-auto mb-1" />
+          <p className="text-[11px] text-muted-foreground/50">{ph('Upload gambar')}</p>
         </div>
       )
     default:

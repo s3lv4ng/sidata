@@ -104,8 +104,8 @@ const emptyForm: ASNFormData = {
   password: '',
 }
 
-const BIDANG_OPTIONS = ['Pendapatan', 'Belanja', 'Aset', 'Umum']
-const STATUS_ASN_OPTIONS = ['PNS', 'PPPK']
+const DEFAULT_BIDANG_OPTIONS = ['Pendapatan', 'Belanja', 'Aset', 'Umum']
+const DEFAULT_STATUS_ASN_OPTIONS = ['PNS', 'PPPK']
 const ITEMS_PER_PAGE = 10
 
 export default function AdminASN() {
@@ -145,6 +145,10 @@ export default function AdminASN() {
   const [changePasswordOpen, setChangePasswordOpen] = useState(false)
   const [changePasswordUserId, setChangePasswordUserId] = useState<string>('')
 
+  // Dynamic options
+  const [bidangOptions, setBidangOptions] = useState<string[]>(DEFAULT_BIDANG_OPTIONS)
+  const [statusAsnOptions, setStatusAsnOptions] = useState<string[]>(DEFAULT_STATUS_ASN_OPTIONS)
+
   const adminId = (session?.user as any)?.id || ''
 
   const fetchASN = useCallback(async () => {
@@ -166,6 +170,33 @@ export default function AdminASN() {
       setLoading(false)
     }
   }, [searchQuery, bidangFilter, statusFilter])
+
+  // Fetch dynamic options
+  useEffect(() => {
+    const fetchOptions = async () => {
+      try {
+        const [bidangRes, statusRes] = await Promise.all([
+          fetch('/api/bidang'),
+          fetch('/api/status-asn'),
+        ])
+        if (bidangRes.ok) {
+          const bidangData = await bidangRes.json()
+          if (bidangData.length > 0) {
+            setBidangOptions(bidangData.map((b: { name: string }) => b.name))
+          }
+        }
+        if (statusRes.ok) {
+          const statusData = await statusRes.json()
+          if (statusData.length > 0) {
+            setStatusAsnOptions(statusData.map((s: { name: string }) => s.name))
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch options:', err)
+      }
+    }
+    fetchOptions()
+  }, [])
 
   useEffect(() => {
     fetchASN()
@@ -465,7 +496,7 @@ export default function AdminASN() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Semua Bidang</SelectItem>
-                  {BIDANG_OPTIONS.map((b) => (
+                  {bidangOptions.map((b) => (
                     <SelectItem key={b} value={b}>
                       {b}
                     </SelectItem>
@@ -478,7 +509,7 @@ export default function AdminASN() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Semua Status</SelectItem>
-                  {STATUS_ASN_OPTIONS.map((s) => (
+                  {statusAsnOptions.map((s) => (
                     <SelectItem key={s} value={s}>
                       {s}
                     </SelectItem>
@@ -508,8 +539,8 @@ export default function AdminASN() {
           </CardContent>
         </Card>
       ) : (
-        <Card className="border-border/60 overflow-hidden">
-          <ScrollArea className="max-h-[calc(100vh-360px)]">
+        <Card className="border-border/60 flex flex-col max-h-[calc(100vh-260px)]">
+          <ScrollArea className="flex-1">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/30">
@@ -618,9 +649,9 @@ export default function AdminASN() {
             </Table>
           </ScrollArea>
 
-          {/* Pagination */}
+          {/* Pagination - outside ScrollArea, pinned to bottom */}
           {totalPages > 1 && (
-            <div className="border-t bg-muted/20 px-4 py-3">
+            <div className="border-t bg-muted/20 px-4 py-3 shrink-0">
               <div className="flex items-center justify-between">
                 <p className="text-xs text-muted-foreground">
                   Menampilkan {(currentPage - 1) * ITEMS_PER_PAGE + 1}–
@@ -769,7 +800,7 @@ export default function AdminASN() {
                     <SelectValue placeholder="Pilih bidang" />
                   </SelectTrigger>
                   <SelectContent>
-                    {BIDANG_OPTIONS.map((b) => (
+                    {bidangOptions.map((b) => (
                       <SelectItem key={b} value={b}>
                         {b}
                       </SelectItem>
@@ -788,7 +819,7 @@ export default function AdminASN() {
                     <SelectValue placeholder="Pilih status" />
                   </SelectTrigger>
                   <SelectContent>
-                    {STATUS_ASN_OPTIONS.map((s) => (
+                    {statusAsnOptions.map((s) => (
                       <SelectItem key={s} value={s}>
                         {s}
                       </SelectItem>

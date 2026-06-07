@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
             type: field.type,
             required: field.required || false,
             options: field.options ? JSON.stringify(field.options) : null,
+            placeholder: field.placeholder || null,
             order: index,
           })),
         },

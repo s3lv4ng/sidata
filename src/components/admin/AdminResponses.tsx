@@ -765,8 +765,8 @@ export default function AdminResponses() {
               </CardContent>
             </Card>
           ) : (
-            <Card className="border-border/60 overflow-hidden">
-              <ScrollArea className="max-h-[calc(100vh-520px)]">
+            <Card className="border-border/60 flex flex-col max-h-[calc(100vh-380px)]">
+              <ScrollArea className="flex-1">
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/30">
@@ -834,9 +834,9 @@ export default function AdminResponses() {
                 </Table>
               </ScrollArea>
 
-              {/* Pagination */}
+              {/* Pagination - outside ScrollArea, pinned to bottom */}
               {totalPages > 1 && (
-                <div className="border-t bg-muted/20 px-4 py-3">
+                <div className="border-t bg-muted/20 px-4 py-3 shrink-0">
                   <div className="flex items-center justify-between">
                     <p className="text-xs text-muted-foreground">
                       Menampilkan {(currentPage - 1) * ITEMS_PER_PAGE + 1}–

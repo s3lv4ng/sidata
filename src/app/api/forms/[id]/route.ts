@@ -59,6 +59,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
               type: field.type,
               required: field.required || false,
               options: field.options ? JSON.stringify(field.options) : null,
+              placeholder: field.placeholder || null,
               order: index,
             })),
           },

@@ -18,6 +18,7 @@ import AdminAnnouncements from '@/components/admin/AdminAnnouncements'
 import AdminSettings from '@/components/admin/AdminSettings'
 import AdminUsers from '@/components/admin/AdminUsers'
 import AdminActivityLogs from '@/components/admin/AdminActivityLogs'
+import AdminMasterData from '@/components/admin/AdminMasterData'
 import HelpFAQ from '@/components/shared/HelpFAQ'
 
 function AppContent() {
@@ -98,6 +99,8 @@ function AdminViews({ currentView }: { currentView: AppView }) {
         return <AdminUsers />
       case 'admin-activity-logs':
         return <AdminActivityLogs />
+      case 'admin-master-data':
+        return <AdminMasterData />
       case 'admin-help':
         return <HelpFAQ userRole="ADMIN" />
       default:

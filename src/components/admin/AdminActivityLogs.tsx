@@ -309,8 +309,8 @@ export default function AdminActivityLogs() {
       </Card>
 
       {/* Logs Table */}
-      <Card>
-        <CardContent className="p-0">
+      <Card className="flex flex-col max-h-[calc(100vh-340px)]">
+        <CardContent className="p-0 flex-1 overflow-hidden">
           {loading ? (
             <div className="flex items-center justify-center py-20">
               <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -323,7 +323,7 @@ export default function AdminActivityLogs() {
               <p className="text-xs mt-1">Coba ubah filter pencarian Anda</p>
             </div>
           ) : (
-            <ScrollArea className="w-full">
+            <ScrollArea className="h-full">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -368,59 +368,61 @@ export default function AdminActivityLogs() {
             </ScrollArea>
           )}
         </CardContent>
-      </Card>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            Menampilkan {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} dari {total} catatan
-          </p>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-            >
-              Sebelumnya
-            </Button>
-            <div className="flex items-center gap-1">
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                let pageNum: number
-                if (totalPages <= 5) {
-                  pageNum = i + 1
-                } else if (page <= 3) {
-                  pageNum = i + 1
-                } else if (page >= totalPages - 2) {
-                  pageNum = totalPages - 4 + i
-                } else {
-                  pageNum = page - 2 + i
-                }
-                return (
-                  <Button
-                    key={pageNum}
-                    variant={page === pageNum ? 'default' : 'outline'}
-                    size="sm"
-                    className="w-8 h-8 p-0"
-                    onClick={() => setPage(pageNum)}
-                  >
-                    {pageNum}
-                  </Button>
-                )
-              })}
+        {/* Pagination - inside Card, pinned to bottom */}
+        {totalPages > 1 && (
+          <div className="border-t bg-muted/20 px-4 py-3 shrink-0">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">
+                Menampilkan {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} dari {total} catatan
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                >
+                  Sebelumnya
+                </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum: number
+                    if (totalPages <= 5) {
+                      pageNum = i + 1
+                    } else if (page <= 3) {
+                      pageNum = i + 1
+                    } else if (page >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i
+                    } else {
+                      pageNum = page - 2 + i
+                    }
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={page === pageNum ? 'default' : 'outline'}
+                        size="sm"
+                        className="w-8 h-8 p-0"
+                        onClick={() => setPage(pageNum)}
+                      >
+                        {pageNum}
+                      </Button>
+                    )
+                  })}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                >
+                  Selanjutnya
+                </Button>
+              </div>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-            >
-              Selanjutnya
-            </Button>
           </div>
-        </div>
-      )}
+        )}
+      </Card>
     </div>
   )
 }

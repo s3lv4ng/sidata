@@ -253,6 +253,28 @@ export async function POST() {
       ],
     });
 
+    // Create default Bidang options
+    await db.bidang.createMany({
+      data: [
+        { name: "Pendapatan" },
+        { name: "Belanja" },
+        { name: "Aset" },
+        { name: "Umum" },
+      ],
+      skipDuplicates: true,
+    });
+
+    // Create default Status ASN options
+    await db.statusASN.createMany({
+      data: [
+        { name: "PNS" },
+        { name: "PPPK" },
+        { name: "PPNPN" },
+        { name: "Kontrak" },
+      ],
+      skipDuplicates: true,
+    });
+
     // Create system settings
     await db.systemSetting.createMany({
       data: [
@@ -263,6 +285,9 @@ export async function POST() {
         { key: "email_instansi", value: "bkad@seruyankab.go.id" },
         { key: "telepon_instansi", value: "0531-891234" },
         { key: "alamat_instansi", value: "Jl. Trans Kalimantan, Kuala Pembuang, Kab. Seruyan, Kalimantan Tengah" },
+        { key: "loginWithNip", value: "true" },
+        { key: "loginWithGoogle", value: "false" },
+        { key: "showPasswordLogin", value: "true" },
       ],
     });
 

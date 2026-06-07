@@ -17,6 +17,7 @@ export type AppView =
   | "admin-settings"
   | "admin-users"
   | "admin-activity-logs"
+  | "admin-master-data"
   | "admin-help";
 
 interface AppState {

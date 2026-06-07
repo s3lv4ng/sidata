@@ -30,6 +30,8 @@ import {
   FileText,
   Save,
   Clock,
+  Star,
+  ImageIcon,
 } from 'lucide-react'
 
 interface FormField {
@@ -38,6 +40,7 @@ interface FormField {
   type: string
   required: boolean
   options: string | null
+  placeholder: string | null
   order: number
 }
 
@@ -72,6 +75,7 @@ interface FieldAnswer {
   filePath?: string
   driveFileId?: string
   driveLink?: string
+  files?: Array<{ name: string; path: string; driveFileId?: string; driveLink?: string }>
 }
 
 export default function FormFiller() {
@@ -86,6 +90,8 @@ export default function FormFiller() {
   const [submitError, setSubmitError] = useState('')
   const [uploadingFields, setUploadingFields] = useState<Set<string>>(new Set())
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, { name: string; path: string; driveLink?: string; driveUploaded?: boolean }>>({})
+  const [multiUploadedFiles, setMultiUploadedFiles] = useState<Record<string, Array<{ name: string; path: string; driveLink?: string; driveUploaded?: boolean }>>>({})
+  const [ratingValues, setRatingValues] = useState<Record<string, number>>({})
 
   const userId = (session?.user as any)?.id || ''
 
@@ -207,6 +213,68 @@ export default function FormFiller() {
       return next
     })
     updateAnswer(fieldId, '')
+  }
+
+  const handleMultiFileUpload = async (fieldId: string, files: FileList) => {
+    setUploadingFields((prev) => new Set(prev).add(fieldId))
+    try {
+      const uploaded: Array<{ name: string; path: string; driveFileId?: string; driveLink?: string; driveUploaded?: boolean }> = []
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
+        const formData = new FormData()
+        formData.append('file', file)
+
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        })
+
+        if (res.ok) {
+          const data = await res.json()
+          uploaded.push({
+            name: data.fileName,
+            path: data.filePath,
+            driveFileId: data.driveFileId || undefined,
+            driveLink: data.driveLink || undefined,
+            driveUploaded: data.driveUploaded || false,
+          })
+        }
+      }
+
+      setMultiUploadedFiles((prev) => ({
+        ...prev,
+        [fieldId]: [...(prev[fieldId] || []), ...uploaded],
+      }))
+
+      // Store as JSON array of file info
+      const allFiles = [...(multiUploadedFiles[fieldId] || []), ...uploaded]
+      updateAnswer(fieldId, JSON.stringify(allFiles.map((f) => ({ name: f.name, path: f.path, driveFileId: f.driveFileId, driveLink: f.driveLink }))))
+    } catch (err) {
+      console.error('Multi upload failed:', err)
+    } finally {
+      setUploadingFields((prev) => {
+        const next = new Set(prev)
+        next.delete(fieldId)
+        return next
+      })
+    }
+  }
+
+  const removeMultiFile = (fieldId: string, fileIndex: number) => {
+    setMultiUploadedFiles((prev) => {
+      const files = [...(prev[fieldId] || [])]
+      files.splice(fileIndex, 1)
+      const updated = { ...prev, [fieldId]: files }
+      // Update answer with remaining files
+      const remaining = files.map((f) => ({ name: f.name, path: f.path, driveFileId: f.driveFileId, driveLink: f.driveLink }))
+      updateAnswer(fieldId, remaining.length > 0 ? JSON.stringify(remaining) : '')
+      return updated
+    })
+  }
+
+  const handleRatingClick = (fieldId: string, rating: number) => {
+    setRatingValues((prev) => ({ ...prev, [fieldId]: rating }))
+    updateAnswer(fieldId, String(rating))
   }
 
   const handleSubmit = async () => {
@@ -458,7 +526,7 @@ export default function FormFiller() {
                     {/* Field types */}
                     {field.type === 'short_text' && (
                       <Input
-                        placeholder="Masukkan jawaban..."
+                        placeholder={field.placeholder || 'Masukkan jawaban...'}
                         value={answer?.value || ''}
                         onChange={(e) => updateAnswer(field.id, e.target.value)}
                         disabled={isFormClosed}
@@ -468,7 +536,7 @@ export default function FormFiller() {
 
                     {field.type === 'paragraph' && (
                       <Textarea
-                        placeholder="Masukkan jawaban..."
+                        placeholder={field.placeholder || 'Masukkan jawaban...'}
                         value={answer?.value || ''}
                         onChange={(e) => updateAnswer(field.id, e.target.value)}
                         disabled={isFormClosed}
@@ -480,7 +548,7 @@ export default function FormFiller() {
                     {field.type === 'number' && (
                       <Input
                         type="number"
-                        placeholder="Masukkan angka..."
+                        placeholder={field.placeholder || 'Masukkan angka...'}
                         value={answer?.value || ''}
                         onChange={(e) => updateAnswer(field.id, e.target.value)}
                         disabled={isFormClosed}
@@ -491,6 +559,7 @@ export default function FormFiller() {
                     {field.type === 'date' && (
                       <Input
                         type="date"
+                        placeholder={field.placeholder || ''}
                         value={answer?.value || ''}
                         onChange={(e) => updateAnswer(field.id, e.target.value)}
                         disabled={isFormClosed}
@@ -561,7 +630,7 @@ export default function FormFiller() {
                         disabled={isFormClosed}
                       >
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Pilih opsi..." />
+                          <SelectValue placeholder={field.placeholder || 'Pilih opsi...'} />
                         </SelectTrigger>
                         <SelectContent>
                           {options.map((option, i) => (
@@ -635,10 +704,206 @@ export default function FormFiller() {
                             <span className="text-sm text-muted-foreground">
                               {uploadingFields.has(field.id)
                                 ? 'Mengunggah...'
-                                : 'Klik untuk unggah file'}
+                                : field.placeholder || 'Klik untuk unggah file'}
                             </span>
                             <input
                               type="file"
+                              className="hidden"
+                              disabled={isFormClosed || uploadingFields.has(field.id)}
+                              onChange={(e) => {
+                                const file = e.target.files?.[0]
+                                if (file) handleFileUpload(field.id, file)
+                              }}
+                            />
+                          </label>
+                        )}
+                      </div>
+                    )}
+
+                    {field.type === 'multi_upload' && (
+                      <div className="space-y-3">
+                        {multiUploadedFiles[field.id] && multiUploadedFiles[field.id].length > 0 && (
+                          <div className="space-y-1.5">
+                            {multiUploadedFiles[field.id].map((f, fIdx) => (
+                              <div key={fIdx} className="flex items-center gap-2 rounded-md border border-primary/20 bg-primary/5 p-3">
+                                <FileText className="w-4 h-4 text-primary shrink-0" />
+                                <span className="text-sm flex-1 truncate">{f.name}</span>
+                                {f.driveUploaded && f.driveLink && (
+                                  <a
+                                    href={f.driveLink}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-emerald-600 hover:text-emerald-700 flex items-center gap-1 shrink-0"
+                                    title="Buka di Google Drive"
+                                  >
+                                    Drive
+                                  </a>
+                                )}
+                                {!isFormClosed && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 shrink-0"
+                                    onClick={() => removeMultiFile(field.id, fIdx)}
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </Button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <label
+                          className={`flex flex-col items-center justify-center rounded-md border-2 border-dashed p-6 transition-colors ${
+                            isFormClosed
+                              ? 'opacity-50 cursor-not-allowed border-muted'
+                              : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-primary/5 cursor-pointer'
+                          }`}
+                        >
+                          {uploadingFields.has(field.id) ? (
+                            <Loader2 className="w-6 h-6 animate-spin text-primary mb-2" />
+                          ) : (
+                            <Upload className="w-6 h-6 text-muted-foreground mb-2" />
+                          )}
+                          <span className="text-sm text-muted-foreground">
+                            {uploadingFields.has(field.id)
+                              ? 'Mengunggah...'
+                              : field.placeholder || 'Klik untuk unggah beberapa file'}
+                          </span>
+                          <span className="text-[11px] text-muted-foreground/70 mt-1">Pilih beberapa file sekaligus</span>
+                          <input
+                            type="file"
+                            multiple
+                            className="hidden"
+                            disabled={isFormClosed || uploadingFields.has(field.id)}
+                            onChange={(e) => {
+                              const files = e.target.files
+                              if (files && files.length > 0) handleMultiFileUpload(field.id, files)
+                              e.target.value = ''
+                            }}
+                          />
+                        </label>
+                      </div>
+                    )}
+
+                    {field.type === 'email' && (
+                      <Input
+                        type="email"
+                        placeholder={field.placeholder || 'email@contoh.com'}
+                        value={answer?.value || ''}
+                        onChange={(e) => updateAnswer(field.id, e.target.value)}
+                        disabled={isFormClosed}
+                        className="h-10"
+                      />
+                    )}
+
+                    {field.type === 'phone' && (
+                      <Input
+                        type="tel"
+                        placeholder={field.placeholder || '08xxxxxxxxxx'}
+                        value={answer?.value || ''}
+                        onChange={(e) => updateAnswer(field.id, e.target.value)}
+                        disabled={isFormClosed}
+                        className="h-10"
+                      />
+                    )}
+
+                    {field.type === 'url' && (
+                      <Input
+                        type="url"
+                        placeholder={field.placeholder || 'https://...'}
+                        value={answer?.value || ''}
+                        onChange={(e) => updateAnswer(field.id, e.target.value)}
+                        disabled={isFormClosed}
+                        className="h-10"
+                      />
+                    )}
+
+                    {field.type === 'time' && (
+                      <Input
+                        type="time"
+                        placeholder={field.placeholder || ''}
+                        value={answer?.value || ''}
+                        onChange={(e) => updateAnswer(field.id, e.target.value)}
+                        disabled={isFormClosed}
+                        className="h-10"
+                      />
+                    )}
+
+                    {field.type === 'rating' && (
+                      <div className="flex items-center gap-1.5">
+                        {[1, 2, 3, 4, 5].map((star) => {
+                          const currentRating = ratingValues[field.id] || (answer?.value ? parseInt(answer.value) : 0)
+                          return (
+                            <button
+                              key={star}
+                              type="button"
+                              disabled={isFormClosed}
+                              onClick={() => handleRatingClick(field.id, star)}
+                              className={`transition-colors ${
+                                isFormClosed ? 'cursor-not-allowed' : 'cursor-pointer hover:scale-110'
+                              }`}
+                            >
+                              <Star
+                                className={`w-7 h-7 transition-colors ${
+                                  star <= currentRating
+                                    ? 'text-amber-400 fill-amber-400'
+                                    : 'text-muted-foreground/30'
+                                }`}
+                              />
+                            </button>
+                          )
+                        })}
+                        {ratingValues[field.id] || (answer?.value ? parseInt(answer.value) : 0) ? (
+                          <span className="text-sm text-muted-foreground ml-2">
+                            {ratingValues[field.id] || parseInt(answer?.value || '0')} / 5
+                          </span>
+                        ) : null}
+                      </div>
+                    )}
+
+                    {field.type === 'image_upload' && (
+                      <div className="space-y-2">
+                        {uploadedFiles[field.id] ? (
+                          <div className="space-y-1.5">
+                            <div className="flex items-center gap-2 rounded-md border border-primary/20 bg-primary/5 p-3">
+                              <ImageIcon className="w-4 h-4 text-primary shrink-0" />
+                              <span className="text-sm flex-1 truncate">
+                                {uploadedFiles[field.id].name}
+                              </span>
+                              {!isFormClosed && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 shrink-0"
+                                  onClick={() => removeFile(field.id)}
+                                >
+                                  <X className="w-3 h-3" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <label
+                            className={`flex flex-col items-center justify-center rounded-md border-2 border-dashed p-6 transition-colors ${
+                              isFormClosed
+                                ? 'opacity-50 cursor-not-allowed border-muted'
+                                : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-primary/5 cursor-pointer'
+                            }`}
+                          >
+                            {uploadingFields.has(field.id) ? (
+                              <Loader2 className="w-6 h-6 animate-spin text-primary mb-2" />
+                            ) : (
+                              <ImageIcon className="w-6 h-6 text-muted-foreground mb-2" />
+                            )}
+                            <span className="text-sm text-muted-foreground">
+                              {uploadingFields.has(field.id)
+                                ? 'Mengunggah...'
+                                : field.placeholder || 'Klik untuk unggah gambar'}
+                            </span>
+                            <input
+                              type="file"
+                              accept="image/*"
                               className="hidden"
                               disabled={isFormClosed || uploadingFields.has(field.id)}
                               onChange={(e) => {

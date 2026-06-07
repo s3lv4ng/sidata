@@ -196,7 +196,7 @@ export default function ASNHomepage() {
   const fetchAnnouncements = async () => {
     try {
       setLoadingAnnouncements(true)
-      const res = await fetch('/api/announcements?isActive=true')
+      const res = await fetch('/api/announcements?isActive=true&isHidden=false')
       if (res.ok) {
         const data = await res.json()
         setAnnouncements(data)

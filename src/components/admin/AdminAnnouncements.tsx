@@ -37,6 +37,8 @@ import {
   ToggleLeft,
   ToggleRight,
   CalendarDays,
+  EyeOff,
+  Eye,
 } from 'lucide-react'
 
 interface AnnouncementItem {
@@ -45,6 +47,7 @@ interface AnnouncementItem {
   content: string
   isPinned: boolean
   isActive: boolean
+  isHidden: boolean
   createdById: string
   createdAt: string
   updatedAt: string
@@ -93,6 +96,7 @@ export default function AdminAnnouncements() {
   const [formTitle, setFormTitle] = useState('')
   const [formContent, setFormContent] = useState('')
   const [formIsPinned, setFormIsPinned] = useState(false)
+  const [formIsHidden, setFormIsHidden] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
 
   // Delete dialog
@@ -129,6 +133,7 @@ export default function AdminAnnouncements() {
     setFormTitle('')
     setFormContent('')
     setFormIsPinned(false)
+    setFormIsHidden(false)
     setEditingId(null)
     setDialogOpen(true)
   }
@@ -138,6 +143,7 @@ export default function AdminAnnouncements() {
     setFormTitle(announcement.title)
     setFormContent(announcement.content)
     setFormIsPinned(announcement.isPinned)
+    setFormIsHidden(announcement.isHidden)
     setEditingId(announcement.id)
     setDialogOpen(true)
   }
@@ -159,6 +165,7 @@ export default function AdminAnnouncements() {
             title: formTitle.trim(),
             content: formContent.trim(),
             isPinned: formIsPinned,
+            isHidden: formIsHidden,
             createdById: userId,
           }),
         })
@@ -179,6 +186,7 @@ export default function AdminAnnouncements() {
             title: formTitle.trim(),
             content: formContent.trim(),
             isPinned: formIsPinned,
+            isHidden: formIsHidden,
             userId,
           }),
         })
@@ -224,6 +232,34 @@ export default function AdminAnnouncements() {
     } catch (err) {
       console.error('Failed to toggle announcement:', err)
       addNotification('Gagal mengubah status pengumuman', 'error')
+    }
+  }
+
+  const handleToggleHidden = async (announcement: AnnouncementItem) => {
+    try {
+      const res = await fetch('/api/announcements', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: announcement.id,
+          isHidden: !announcement.isHidden,
+          userId,
+        }),
+      })
+      if (res.ok) {
+        addNotification(
+          announcement.isHidden
+            ? 'Pengumuman berhasil ditampilkan'
+            : 'Pengumuman berhasil disembunyikan',
+          'success'
+        )
+        await fetchAnnouncements()
+      } else {
+        addNotification('Gagal mengubah visibilitas pengumuman', 'error')
+      }
+    } catch (err) {
+      console.error('Failed to toggle hidden:', err)
+      addNotification('Gagal mengubah visibilitas pengumuman', 'error')
     }
   }
 
@@ -386,6 +422,12 @@ export default function AdminAnnouncements() {
                         >
                           {announcement.isActive ? 'Aktif' : 'Nonaktif'}
                         </Badge>
+                        {announcement.isHidden && (
+                          <Badge className="text-[10px] font-medium bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-900/40 dark:text-violet-300 dark:border-violet-800" variant="outline">
+                            <EyeOff className="w-3 h-3 mr-1" />
+                            Tersembunyi
+                          </Badge>
+                        )}
                       </div>
                       <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
                         {announcement.content}
@@ -401,6 +443,23 @@ export default function AdminAnnouncements() {
 
                     {/* Actions */}
                     <div className="flex items-center gap-1 shrink-0 sm:ml-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={`h-8 w-8 ${
+                          announcement.isHidden
+                            ? 'text-violet-600 hover:text-violet-700 hover:bg-violet-50'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                        }`}
+                        onClick={() => handleToggleHidden(announcement)}
+                        title={announcement.isHidden ? 'Tampilkan di Beranda' : 'Sembunyikan dari Beranda'}
+                      >
+                        {announcement.isHidden ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -512,6 +571,18 @@ export default function AdminAnnouncements() {
               <Switch
                 checked={formIsPinned}
                 onCheckedChange={setFormIsPinned}
+              />
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-muted/10">
+              <div>
+                <Label className="text-sm font-medium">Sembunyikan dari Beranda ASN</Label>
+                <p className="text-xs text-muted-foreground">
+                  Pengumuman tersembunyi tidak akan ditampilkan di halaman beranda ASN
+                </p>
+              </div>
+              <Switch
+                checked={formIsHidden}
+                onCheckedChange={setFormIsHidden}
               />
             </div>
           </div>

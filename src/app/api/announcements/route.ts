@@ -9,6 +9,8 @@ export async function GET(request: NextRequest) {
 
     const where: any = {};
     if (isActive === "true") where.isActive = true;
+    const isHidden = searchParams.get("isHidden");
+    if (isHidden === "false") where.isHidden = false;
 
     const announcements = await db.announcement.findMany({
       where,
@@ -26,10 +28,10 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { title, content, isPinned, createdById } = body;
+    const { title, content, isPinned, isHidden, createdById } = body;
 
     const announcement = await db.announcement.create({
-      data: { title, content, isPinned: isPinned || false, createdById },
+      data: { title, content, isPinned: isPinned || false, isHidden: isHidden || false, createdById },
     });
 
     // Log activity
@@ -51,7 +53,7 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, title, content, isPinned, isActive, userId } = body;
+    const { id, title, content, isPinned, isActive, isHidden, userId } = body;
 
     const announcement = await db.announcement.update({
       where: { id },
@@ -60,6 +62,7 @@ export async function PUT(request: NextRequest) {
         ...(content !== undefined && { content }),
         ...(isPinned !== undefined && { isPinned }),
         ...(isActive !== undefined && { isActive }),
+        ...(isHidden !== undefined && { isHidden }),
       },
     });
 

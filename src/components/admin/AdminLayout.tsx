@@ -28,6 +28,7 @@ import {
   Moon,
   Sun,
   HelpCircle,
+  Database,
 } from 'lucide-react'
 
 interface MenuItem {
@@ -40,6 +41,7 @@ const menuItems: MenuItem[] = [
   { label: 'Dashboard', icon: LayoutDashboard, view: 'admin-dashboard' },
   { label: 'Manajemen Form', icon: FileText, view: 'admin-forms' },
   { label: 'Data ASN', icon: Users, view: 'admin-asn' },
+  { label: 'Data Master', icon: Database, view: 'admin-master-data' },
   { label: 'Hasil Pengisian', icon: ClipboardList, view: 'admin-responses' },
   { label: 'Laporan', icon: BarChart3, view: 'admin-reports' },
   { label: 'Pengumuman', icon: Megaphone, view: 'admin-announcements' },
@@ -203,8 +205,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* Sidebar */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-50 flex flex-col w-[272px] bg-[oklch(0.22_0.06_250)] text-white transition-transform duration-200 ease-in-out ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0 lg:w-[72px]'
+        className={`fixed lg:sticky top-0 h-screen z-50 lg:z-auto flex flex-col bg-[oklch(0.22_0.06_250)] text-white transition-all duration-200 ease-in-out ${
+          sidebarOpen ? 'w-[272px] translate-x-0' : '-translate-x-full w-0 lg:w-[72px] lg:translate-x-0'
         }`}
       >
         {/* Sidebar header */}

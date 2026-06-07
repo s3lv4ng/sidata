@@ -47,15 +47,16 @@ model Form {
 }
 
 model FormField {
-  id        String   @id @default(cuid())
-  formId    String
-  label     String
-  type      String   // short_text, paragraph, number, date, multiple_choice, checkbox, file_upload, dropdown
-  required  Boolean  @default(false)
-  options   String?  // JSON string for choices (multiple_choice, checkbox, dropdown)
-  order     Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  formId      String
+  label       String
+  type        String   // short_text, paragraph, number, date, multiple_choice, checkbox, file_upload, multi_upload, dropdown, email, phone, url, time, rating, scale, image_upload, signature
+  required    Boolean  @default(false)
+  options     String?  // JSON string for choices (multiple_choice, checkbox, dropdown)
+  placeholder String?  // Placeholder text for the field
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   form      Form            @relation(fields: [formId], references: [id], onDelete: Cascade)
   responses FieldResponse[]
@@ -97,6 +98,7 @@ model Announcement {
   content   String
   isPinned  Boolean  @default(false)
   isActive  Boolean  @default(true)
+  isHidden  Boolean  @default(false)  // Hide from ASN homepage
   createdById String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -119,4 +121,18 @@ model SystemSetting {
   id    String @id @default(cuid())
   key   String @unique
   value String
+}
+
+model Bidang {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model StatusASN {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
