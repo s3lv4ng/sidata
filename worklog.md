@@ -339,3 +339,27 @@ Stage Summary:
 - Test Upload button lets user verify when their setup works
 - All lint passes (only pre-existing custom-server.js warnings)
 - Verified with agent-browser: Drive tab shows correct status, Test Upload button, and solution instructions
+
+---
+Task ID: 7
+Agent: main
+Task: Fix FormFiller TypeError: Cannot read properties of undefined (reading 'type')
+
+Work Log:
+- Root cause: `/api/forms/[id]` API route used `include: { fields: true }` for response fields, which only included FieldResponse records without the nested `field` (FormField) relation
+- This caused `f.field.type` on line 125 of FormFiller.tsx to throw TypeError because `f.field` was undefined
+- Fix 1: Updated `/api/forms/[id]/route.ts` to use `include: { fields: { include: { field: true } } }` for both userId-filtered and unfiltered response queries
+- Fix 2: Added optional chaining `f.field?.type` in FormFiller.tsx as a safety net
+- Fix 3: Extended file type check to include `image_upload` and `multi_upload` (not just `file_upload`)
+- Fix 4: Updated FormResponse interface to include `driveFileId` and `driveLink` fields
+- Fix 5: Updated existing answers initialization to include `driveFileId` and `driveLink` from response data
+- Fix 6: Changed `(f as any).driveLink` to `f.driveLink` since driveLink is now properly typed in the interface
+- Verified with agent-browser: no TypeError errors, forms load correctly, file upload fields work, existing responses display properly
+
+Stage Summary:
+- TypeError crash on FormFiller FIXED ✅
+- API now properly includes FormField relation in response data
+- Drive link info (driveFileId, driveLink) properly passed through form fill flow
+- Optional chaining safety net prevents future crashes if field relation is missing
+- Google Drive upload flow is ALREADY wired up in /api/upload → calls uploadToDrive() (non-blocking)
+- Google Drive upload still fails due to My Drive quota limitation (known issue, requires Shared Drive)

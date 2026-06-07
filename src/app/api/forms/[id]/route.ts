@@ -16,10 +16,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         responses: userId
           ? {
               where: { userId },
-              include: { fields: true, user: { select: { id: true, name: true, nip: true, bidang: true } } },
+              include: { fields: { include: { field: true } }, user: { select: { id: true, name: true, nip: true, bidang: true } } },
             }
           : {
-              include: { fields: true, user: { select: { id: true, name: true, nip: true, bidang: true, jabatan: true, pangkat: true } } },
+              include: { fields: { include: { field: true } }, user: { select: { id: true, name: true, nip: true, bidang: true, jabatan: true, pangkat: true } } },
             },
       },
     });

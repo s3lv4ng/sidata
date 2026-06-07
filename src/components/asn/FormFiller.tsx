@@ -53,6 +53,8 @@ interface FormResponse {
     value: string | null
     fileName: string | null
     filePath: string | null
+    driveFileId: string | null
+    driveLink: string | null
     field: FormField
   }>
 }
@@ -115,6 +117,8 @@ export default function FormFiller() {
               value: existingField?.value || '',
               fileName: existingField?.fileName || undefined,
               filePath: existingField?.filePath || undefined,
+              driveFileId: existingField?.driveFileId || undefined,
+              driveLink: existingField?.driveLink || undefined,
             }
           })
           setAnswers(existingAnswers)
@@ -122,12 +126,13 @@ export default function FormFiller() {
           // Set uploaded files info for existing file fields
           const existingFiles: Record<string, { name: string; path: string; driveLink?: string; driveUploaded?: boolean }> = {}
           data.responses[0].fields.forEach((f) => {
-            if (f.field.type === 'file_upload' && f.fileName && f.filePath) {
+            const fieldType = f.field?.type
+            if ((fieldType === 'file_upload' || fieldType === 'image_upload' || fieldType === 'multi_upload') && f.fileName && f.filePath) {
               existingFiles[f.fieldId] = {
                 name: f.fileName,
                 path: f.filePath,
-                driveLink: (f as any).driveLink || undefined,
-                driveUploaded: !!(f as any).driveLink,
+                driveLink: f.driveLink || undefined,
+                driveUploaded: !!f.driveLink,
               }
             }
           })
