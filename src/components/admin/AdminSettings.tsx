@@ -18,6 +18,8 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible'
 import {
   Settings,
   Save,
@@ -45,6 +47,7 @@ import {
   Table2,
   Upload,
   Sparkles,
+  ChevronDown,
 } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 
@@ -164,6 +167,7 @@ export default function AdminSettings() {
   const [driveFilesDialogOpen, setDriveFilesDialogOpen] = useState(false)
   const [showDriveCredentials, setShowDriveCredentials] = useState(false)
   const [showGoogleClientSecret, setShowGoogleClientSecret] = useState(false)
+  const [oauthInstructionsOpen, setOauthInstructionsOpen] = useState(false)
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -344,633 +348,753 @@ export default function AdminSettings() {
         </div>
       )}
 
-      {/* App Identity Section */}
-      <Card className="border-border/60">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
-            <Type className="w-4 h-4" />
-            Identitas Aplikasi
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {settingsConfig.slice(0, 2).map((config, idx) => {
-            const Icon = config.icon
-            const changed = isChanged(config.key)
-            const savingField = saving.has(config.key)
-            return (
-              <div key={config.key}>
-                {idx > 0 && <Separator className="mb-4" />}
-                <div className="flex flex-col sm:flex-row sm:items-start gap-3">
-                  <div className="flex-1 space-y-1.5">
-                    <div className="flex items-center gap-2">
-                      <Icon className="w-3.5 h-3.5 text-muted-foreground" />
-                      <Label className="text-sm font-medium">{config.label}</Label>
-                      {changed && (
-                        <Badge
-                          variant="outline"
-                          className="text-[9px] font-medium bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800"
-                        >
-                          Diubah
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground">{config.description}</p>
-                    <Input
-                      placeholder={config.placeholder}
-                      value={settings[config.key] || ''}
-                      onChange={(e) => handleChange(config.key, e.target.value)}
-                      className={changed ? 'border-amber-300 focus-visible:ring-amber-200' : ''}
-                    />
-                  </div>
-                  <Button
-                    size="sm"
-                    variant={changed ? 'default' : 'outline'}
-                    disabled={!changed || savingField}
-                    onClick={() => handleSaveOne(config.key)}
-                    className="gap-1.5 shrink-0 mt-6 sm:mt-0 sm:self-end"
-                  >
-                    {savingField ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : changed ? (
-                      <Save className="w-3.5 h-3.5" />
-                    ) : (
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                    )}
-                    {savingField ? 'Menyimpan...' : changed ? 'Simpan' : 'Tersimpan'}
-                  </Button>
-                </div>
-              </div>
-            )
-          })}
-        </CardContent>
-      </Card>
+      {/* Tabs */}
+      <Tabs defaultValue="identitas" className="w-full">
+        <TabsList className="w-full flex-wrap h-auto gap-1 p-1">
+          <TabsTrigger value="identitas" className="gap-1.5 text-xs">
+            <Type className="w-3.5 h-3.5" />
+            Identitas
+          </TabsTrigger>
+          <TabsTrigger value="login" className="gap-1.5 text-xs">
+            <Shield className="w-3.5 h-3.5" />
+            Login
+          </TabsTrigger>
+          <TabsTrigger value="drive" className="gap-1.5 text-xs">
+            <HardDrive className="w-3.5 h-3.5" />
+            Google Drive
+          </TabsTrigger>
+          <TabsTrigger value="sheets" className="gap-1.5 text-xs">
+            <Table2 className="w-3.5 h-3.5" />
+            Google Sheets
+          </TabsTrigger>
+          <TabsTrigger value="lainnya" className="gap-1.5 text-xs">
+            <Sparkles className="w-3.5 h-3.5" />
+            Lainnya
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Institution Info Section */}
-      <Card className="border-border/60">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
-            <Building2 className="w-4 h-4" />
-            Informasi Instansi
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {settingsConfig.slice(2).map((config, idx) => {
-            const Icon = config.icon
-            const changed = isChanged(config.key)
-            const savingField = saving.has(config.key)
-            return (
-              <div key={config.key}>
-                {idx > 0 && <Separator className="mb-4" />}
-                <div className="flex flex-col sm:flex-row sm:items-start gap-3">
-                  <div className="flex-1 space-y-1.5">
-                    <div className="flex items-center gap-2">
-                      <Icon className="w-3.5 h-3.5 text-muted-foreground" />
-                      <Label className="text-sm font-medium">{config.label}</Label>
-                      {changed && (
-                        <Badge
-                          variant="outline"
-                          className="text-[9px] font-medium bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800"
-                        >
-                          Diubah
-                        </Badge>
-                      )}
+        {/* Tab 1: Identitas */}
+        <TabsContent value="identitas" className="space-y-4 mt-4">
+          {/* App Identity Section */}
+          <Card className="border-border/60">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                <Type className="w-4 h-4" />
+                Identitas Aplikasi
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {settingsConfig.slice(0, 2).map((config, idx) => {
+                const Icon = config.icon
+                const changed = isChanged(config.key)
+                const savingField = saving.has(config.key)
+                return (
+                  <div key={config.key}>
+                    {idx > 0 && <Separator className="mb-4" />}
+                    <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+                      <div className="flex-1 space-y-1.5">
+                        <div className="flex items-center gap-2">
+                          <Icon className="w-3.5 h-3.5 text-muted-foreground" />
+                          <Label className="text-sm font-medium">{config.label}</Label>
+                          {changed && (
+                            <Badge
+                              variant="outline"
+                              className="text-[9px] font-medium bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800"
+                            >
+                              Diubah
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">{config.description}</p>
+                        <Input
+                          placeholder={config.placeholder}
+                          value={settings[config.key] || ''}
+                          onChange={(e) => handleChange(config.key, e.target.value)}
+                          className={changed ? 'border-amber-300 focus-visible:ring-amber-200' : ''}
+                        />
+                      </div>
+                      <Button
+                        size="sm"
+                        variant={changed ? 'default' : 'outline'}
+                        disabled={!changed || savingField}
+                        onClick={() => handleSaveOne(config.key)}
+                        className="gap-1.5 shrink-0 mt-6 sm:mt-0 sm:self-end"
+                      >
+                        {savingField ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : changed ? (
+                          <Save className="w-3.5 h-3.5" />
+                        ) : (
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                        )}
+                        {savingField ? 'Menyimpan...' : changed ? 'Simpan' : 'Tersimpan'}
+                      </Button>
                     </div>
-                    <p className="text-xs text-muted-foreground">{config.description}</p>
-                    {config.type === 'textarea' ? (
-                      <Textarea
-                        placeholder={config.placeholder}
-                        value={settings[config.key] || ''}
-                        onChange={(e) => handleChange(config.key, e.target.value)}
-                        rows={3}
-                        className={`resize-none ${changed ? 'border-amber-300 focus-visible:ring-amber-200' : ''}`}
-                      />
+                  </div>
+                )
+              })}
+            </CardContent>
+          </Card>
+
+          {/* Institution Info Section */}
+          <Card className="border-border/60">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                <Building2 className="w-4 h-4" />
+                Informasi Instansi
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {settingsConfig.slice(2).map((config, idx) => {
+                const Icon = config.icon
+                const changed = isChanged(config.key)
+                const savingField = saving.has(config.key)
+                return (
+                  <div key={config.key}>
+                    {idx > 0 && <Separator className="mb-4" />}
+                    <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+                      <div className="flex-1 space-y-1.5">
+                        <div className="flex items-center gap-2">
+                          <Icon className="w-3.5 h-3.5 text-muted-foreground" />
+                          <Label className="text-sm font-medium">{config.label}</Label>
+                          {changed && (
+                            <Badge
+                              variant="outline"
+                              className="text-[9px] font-medium bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800"
+                            >
+                              Diubah
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">{config.description}</p>
+                        {config.type === 'textarea' ? (
+                          <Textarea
+                            placeholder={config.placeholder}
+                            value={settings[config.key] || ''}
+                            onChange={(e) => handleChange(config.key, e.target.value)}
+                            rows={3}
+                            className={`resize-none ${changed ? 'border-amber-300 focus-visible:ring-amber-200' : ''}`}
+                          />
+                        ) : (
+                          <Input
+                            placeholder={config.placeholder}
+                            value={settings[config.key] || ''}
+                            onChange={(e) => handleChange(config.key, e.target.value)}
+                            className={changed ? 'border-amber-300 focus-visible:ring-amber-200' : ''}
+                          />
+                        )}
+                      </div>
+                      <Button
+                        size="sm"
+                        variant={changed ? 'default' : 'outline'}
+                        disabled={!changed || savingField}
+                        onClick={() => handleSaveOne(config.key)}
+                        className="gap-1.5 shrink-0 mt-6 sm:mt-0 sm:self-end"
+                      >
+                        {savingField ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : changed ? (
+                          <Save className="w-3.5 h-3.5" />
+                        ) : (
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                        )}
+                        {savingField ? 'Menyimpan...' : changed ? 'Simpan' : 'Tersimpan'}
+                      </Button>
+                    </div>
+                  </div>
+                )
+              })}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab 2: Login */}
+        <TabsContent value="login" className="space-y-4 mt-4">
+          <Card className="border-border/60">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                <Shield className="w-4 h-4" />
+                Metode Login
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Login with NIP */}
+              <div className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-muted/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <UserCog className="w-4 h-4 text-primary" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Label className="text-sm font-medium">Login dengan NIP/Password</Label>
+                      <Badge
+                        variant="outline"
+                        className={`text-[9px] font-medium ${
+                          settings.loginWithNip !== 'false'
+                            ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800'
+                            : 'bg-gray-50 text-gray-500 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700'
+                        }`}
+                      >
+                        {settings.loginWithNip !== 'false' ? 'Aktif' : 'Nonaktif'}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Izinkan pengguna login menggunakan NIP dan password</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={settings.loginWithNip !== 'false'}
+                  onCheckedChange={(checked) => {
+                    handleChange('loginWithNip', checked ? 'true' : 'false')
+                  }}
+                />
+              </div>
+
+              {/* Show password field */}
+              <div className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-muted/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center">
+                    {settings.showPasswordLogin !== 'false' ? (
+                      <Eye className="w-4 h-4 text-amber-600" />
                     ) : (
+                      <EyeOff className="w-4 h-4 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Label className="text-sm font-medium">Tampilkan Field Password</Label>
+                      <Badge
+                        variant="outline"
+                        className={`text-[9px] font-medium ${
+                          settings.showPasswordLogin !== 'false'
+                            ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800'
+                            : 'bg-gray-50 text-gray-500 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700'
+                        }`}
+                      >
+                        {settings.showPasswordLogin !== 'false' ? 'Aktif' : 'Nonaktif'}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Tampilkan atau sembunyikan field password saat login</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={settings.showPasswordLogin !== 'false'}
+                  onCheckedChange={(checked) => {
+                    handleChange('showPasswordLogin', checked ? 'true' : 'false')
+                  }}
+                />
+              </div>
+
+              {/* Login with Google */}
+              <div className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-muted/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/30 flex items-center justify-center">
+                    <svg className="w-4 h-4" viewBox="0 0 24 24">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Label className="text-sm font-medium">Login dengan Google</Label>
+                      <Badge
+                        variant="outline"
+                        className={`text-[9px] font-medium ${
+                          settings.loginWithGoogle === 'true'
+                            ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800'
+                            : 'bg-gray-50 text-gray-500 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700'
+                        }`}
+                      >
+                        {settings.loginWithGoogle === 'true' ? 'Aktif' : 'Nonaktif'}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Izinkan pengguna login menggunakan akun Google</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={settings.loginWithGoogle === 'true'}
+                  onCheckedChange={(checked) => {
+                    handleChange('loginWithGoogle', checked ? 'true' : 'false')
+                  }}
+                />
+              </div>
+
+              {/* Google OAuth Configuration - shown when Google login is enabled */}
+              {settings.loginWithGoogle === 'true' && (
+                <div className="space-y-4 ml-2 pl-4 border-l-2 border-red-200 dark:border-red-800">
+                  {/* Collapsible Setup Instructions */}
+                  <Collapsible open={oauthInstructionsOpen} onOpenChange={setOauthInstructionsOpen}>
+                    <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50/50 p-3 dark:border-blue-800 dark:bg-blue-900/10">
+                      <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <CollapsibleTrigger asChild>
+                          <button className="flex items-center gap-1.5 text-sm font-medium text-blue-700 dark:text-blue-300 hover:text-blue-800 dark:hover:text-blue-200 transition-colors w-full text-left">
+                            Cara Mengatur Login Google
+                            <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${oauthInstructionsOpen ? 'rotate-180' : ''}`} />
+                          </button>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <ol className="list-decimal list-inside space-y-0.5 text-xs text-blue-600 dark:text-blue-400 mt-2">
+                            <li>Buka <a href="https://console.cloud.google.com" target="_blank" rel="noopener noreferrer" className="underline inline-flex items-center gap-0.5">Google Cloud Console <ExternalLink className="w-2.5 h-2.5" /></a></li>
+                            <li>Buat project baru atau pilih project yang ada</li>
+                            <li>Buka menu <strong>APIs &amp; Services → Credentials</strong></li>
+                            <li>Klik <strong>Create Credentials → OAuth client ID</strong></li>
+                            <li>Pilih <strong>Web application</strong> sebagai Application type</li>
+                            <li>Tambahkan <strong>Authorized redirect URI</strong>: <code className="bg-blue-100 dark:bg-blue-800/50 px-1 rounded text-[11px] break-all">{typeof window !== 'undefined' ? window.location.origin : ''}/api/auth/callback/google</code></li>
+                            <li>Copy <strong>Client ID</strong> dan <strong>Client Secret</strong> ke form di bawah</li>
+                          </ol>
+                        </CollapsibleContent>
+                      </div>
+                    </div>
+                  </Collapsible>
+
+                  {/* Google Client ID */}
+                  <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+                    <div className="flex-1 space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <Key className="w-3.5 h-3.5 text-muted-foreground" />
+                        <Label className="text-sm font-medium">Google Client ID</Label>
+                        {isChanged('googleLoginClientId') && (
+                          <Badge
+                            variant="outline"
+                            className="text-[9px] font-medium bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800"
+                          >
+                            Diubah
+                          </Badge>
+                        )}
+                        {!!originalSettings.googleLoginClientId && !isChanged('googleLoginClientId') && (
+                          <Badge variant="outline" className="text-[9px] font-medium bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800">
+                            Terisi
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">OAuth Client ID dari Google Cloud Console</p>
                       <Input
-                        placeholder={config.placeholder}
-                        value={settings[config.key] || ''}
-                        onChange={(e) => handleChange(config.key, e.target.value)}
-                        className={changed ? 'border-amber-300 focus-visible:ring-amber-200' : ''}
+                        placeholder="123456789-abc.apps.googleusercontent.com"
+                        value={settings.googleLoginClientId || ''}
+                        onChange={(e) => handleChange('googleLoginClientId', e.target.value)}
+                        className={isChanged('googleLoginClientId') ? 'border-amber-300 focus-visible:ring-amber-200' : ''}
                       />
-                    )}
+                    </div>
+                    <Button
+                      size="sm"
+                      variant={isChanged('googleLoginClientId') ? 'default' : 'outline'}
+                      disabled={!isChanged('googleLoginClientId') || saving.has('googleLoginClientId')}
+                      onClick={() => handleSaveOne('googleLoginClientId')}
+                      className="gap-1.5 shrink-0 sm:self-end"
+                    >
+                      {saving.has('googleLoginClientId') ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                      {saving.has('googleLoginClientId') ? 'Menyimpan...' : isChanged('googleLoginClientId') ? 'Simpan' : 'Tersimpan'}
+                    </Button>
                   </div>
+
+                  {/* Google Client Secret */}
+                  <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+                    <div className="flex-1 space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <Key className="w-3.5 h-3.5 text-muted-foreground" />
+                        <Label className="text-sm font-medium">Google Client Secret</Label>
+                        {isChanged('googleLoginClientSecret') && (
+                          <Badge
+                            variant="outline"
+                            className="text-[9px] font-medium bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800"
+                          >
+                            Diubah
+                          </Badge>
+                        )}
+                        {!!originalSettings.googleLoginClientSecret && !isChanged('googleLoginClientSecret') && (
+                          <Badge variant="outline" className="text-[9px] font-medium bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800">
+                            Terisi
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">OAuth Client Secret dari Google Cloud Console</p>
+                      <div className="relative">
+                        <Input
+                          type={showGoogleClientSecret ? 'text' : 'password'}
+                          placeholder="GOCSPX-xxxxxxxxxxxxxxxxx"
+                          value={originalSettings.googleLoginClientSecret && !isChanged('googleLoginClientSecret') ? '••••••••••••••••' : (settings.googleLoginClientSecret || '')}
+                          onChange={(e) => handleChange('googleLoginClientSecret', e.target.value)}
+                          onFocus={() => {
+                            if (originalSettings.googleLoginClientSecret && settings.googleLoginClientSecret === originalSettings.googleLoginClientSecret) {
+                              handleChange('googleLoginClientSecret', '')
+                            }
+                          }}
+                          className={`pr-10 ${isChanged('googleLoginClientSecret') ? 'border-amber-300 focus-visible:ring-amber-200' : ''}`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowGoogleClientSecret(!showGoogleClientSecret)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                          tabIndex={-1}
+                        >
+                          {showGoogleClientSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant={isChanged('googleLoginClientSecret') ? 'default' : 'outline'}
+                      disabled={!isChanged('googleLoginClientSecret') || saving.has('googleLoginClientSecret')}
+                      onClick={() => handleSaveOne('googleLoginClientSecret')}
+                      className="gap-1.5 shrink-0 sm:self-end"
+                    >
+                      {saving.has('googleLoginClientSecret') ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                      {saving.has('googleLoginClientSecret') ? 'Menyimpan...' : isChanged('googleLoginClientSecret') ? 'Simpan' : 'Tersimpan'}
+                    </Button>
+                  </div>
+
+                  {/* Configuration Status */}
+                  {(() => {
+                    const hasClientId = !!(settings.googleLoginClientId || '').trim()
+                    const hasClientSecret = !!(settings.googleLoginClientSecret || '').trim()
+                    const isFullyConfigured = hasClientId && hasClientSecret
+                    return (
+                      <div className={`flex items-center gap-2 rounded-lg border p-2.5 ${
+                        isFullyConfigured
+                          ? 'border-emerald-200 bg-emerald-50/50 dark:border-emerald-800 dark:bg-emerald-900/10'
+                          : 'border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-900/10'
+                      }`}>
+                        {isFullyConfigured ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                        ) : (
+                          <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                        )}
+                        <span className={`text-xs font-medium ${
+                          isFullyConfigured
+                            ? 'text-emerald-700 dark:text-emerald-300'
+                            : 'text-amber-700 dark:text-amber-300'
+                        }`}>
+                          {isFullyConfigured
+                            ? 'Google OAuth terkonfigurasi. Login Google akan aktif setelah disimpan.'
+                            : !hasClientId && !hasClientSecret
+                              ? 'Client ID dan Client Secret belum diisi. Login Google tidak akan berfungsi.'
+                              : !hasClientId
+                                ? 'Client ID belum diisi.'
+                                : 'Client Secret belum diisi.'
+                          }
+                        </span>
+                      </div>
+                    )
+                  })()}
+                </div>
+              )}
+
+              {(isChanged('loginWithNip') || isChanged('loginWithGoogle') || isChanged('showPasswordLogin') || isChanged('googleLoginClientId') || isChanged('googleLoginClientSecret')) && (
+                <div className="flex justify-end">
                   <Button
+                    onClick={async () => {
+                      const loginSettings: SettingsMap = {}
+                      if (isChanged('loginWithNip')) loginSettings.loginWithNip = settings.loginWithNip || 'true'
+                      if (isChanged('loginWithGoogle')) loginSettings.loginWithGoogle = settings.loginWithGoogle || 'false'
+                      if (isChanged('showPasswordLogin')) loginSettings.showPasswordLogin = settings.showPasswordLogin || 'true'
+                      if (isChanged('googleLoginClientId')) loginSettings.googleLoginClientId = settings.googleLoginClientId || ''
+                      if (isChanged('googleLoginClientSecret')) loginSettings.googleLoginClientSecret = settings.googleLoginClientSecret || ''
+                      try {
+                        const res = await fetch('/api/settings', {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ settings: loginSettings, userId }),
+                        })
+                        if (res.ok) {
+                          setOriginalSettings({ ...settings })
+                          addNotification('Pengaturan login berhasil disimpan', 'success')
+                        }
+                      } catch {
+                        addNotification('Gagal menyimpan pengaturan login', 'error')
+                      }
+                    }}
                     size="sm"
-                    variant={changed ? 'default' : 'outline'}
-                    disabled={!changed || savingField}
-                    onClick={() => handleSaveOne(config.key)}
-                    className="gap-1.5 shrink-0 mt-6 sm:mt-0 sm:self-end"
+                    className="gap-2"
                   >
-                    {savingField ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : changed ? (
-                      <Save className="w-3.5 h-3.5" />
-                    ) : (
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                    )}
-                    {savingField ? 'Menyimpan...' : changed ? 'Simpan' : 'Tersimpan'}
+                    <Save className="w-3.5 h-3.5" />
+                    Simpan Pengaturan Login
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab 3: Google Drive */}
+        <TabsContent value="drive" className="space-y-4 mt-4">
+          <Card className="border-border/60">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                  <HardDrive className="w-4 h-4" />
+                  Integrasi Google Drive
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  {/* Connection status badge */}
+                  {driveStatus && (
+                    <Badge
+                      variant="outline"
+                      className={`text-[10px] ${
+                        driveStatus.connected
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800'
+                          : driveStatus.configured
+                            ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800'
+                            : 'bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-900/20 dark:text-gray-400 dark:border-gray-800'
+                      }`}
+                    >
+                      {driveStatus.connected ? (
+                        <><Cloud className="w-3 h-3 mr-1" /> Terhubung</>
+                      ) : driveStatus.configured ? (
+                        <><CloudOff className="w-3 h-3 mr-1" /> Gagal Terhubung</>
+                      ) : (
+                        <><CloudOff className="w-3 h-3 mr-1" /> Belum Dikonfigurasi</>
+                      )}
+                    </Badge>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={checkDriveStatus}
+                    disabled={testingDrive}
+                    className="h-7 gap-1.5 text-xs"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${testingDrive ? 'animate-spin' : ''}`} />
+                    Tes Koneksi
                   </Button>
                 </div>
               </div>
-            )
-          })}
-        </CardContent>
-      </Card>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Connection info */}
+              {driveStatus && driveStatus.connected && driveStatus.folder && (
+                <div className="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 dark:border-emerald-800 dark:bg-emerald-900/10">
+                  <FolderOpen className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300 truncate">
+                      {driveStatus.folder.name}
+                    </p>
+                    <p className="text-[11px] text-emerald-600/70 dark:text-emerald-400/70">
+                      ID: {driveStatus.folder.id}
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 gap-1.5 text-xs shrink-0"
+                    onClick={() => setDriveFilesDialogOpen(true)}
+                  >
+                    <FileText className="w-3 h-3" />
+                    Lihat File
+                  </Button>
+                </div>
+              )}
 
-      {/* Login Method Settings */}
-      <Card className="border-border/60">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
-            <Shield className="w-4 h-4" />
-            Metode Login
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Login with NIP */}
-          <div className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-muted/10">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                <UserCog className="w-4 h-4 text-primary" />
-              </div>
-              <div>
-                <Label className="text-sm font-medium">Login dengan NIP/Password</Label>
-                <p className="text-xs text-muted-foreground">Izinkan pengguna login menggunakan NIP dan password</p>
-              </div>
-            </div>
-            <Switch
-              checked={settings.loginWithNip !== 'false'}
-              onCheckedChange={(checked) => {
-                handleChange('loginWithNip', checked ? 'true' : 'false')
-              }}
-            />
-          </div>
+              {driveStatus && !driveStatus.connected && driveStatus.configured && (
+                <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50/50 p-3 dark:border-red-800 dark:bg-red-900/10">
+                  <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0" />
+                  <p className="text-sm text-red-700 dark:text-red-300">{driveStatus.message}</p>
+                </div>
+              )}
 
-          {/* Show password field */}
-          <div className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-muted/10">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center">
-                {settings.showPasswordLogin !== 'false' ? (
-                  <Eye className="w-4 h-4 text-amber-600" />
-                ) : (
-                  <EyeOff className="w-4 h-4 text-muted-foreground" />
+              {driveStatus && !driveStatus.configured && (
+                <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50/50 p-3 dark:border-blue-800 dark:bg-blue-900/10">
+                  <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                  <div className="text-sm text-blue-700 dark:text-blue-300">
+                    <p className="font-medium mb-1">Cara Mengatur Google Drive:</p>
+                    <ol className="list-decimal list-inside space-y-0.5 text-xs text-blue-600 dark:text-blue-400">
+                      <li>Buka <a href="https://console.cloud.google.com" target="_blank" rel="noopener noreferrer" className="underline inline-flex items-center gap-0.5">Google Cloud Console <ExternalLink className="w-2.5 h-2.5" /></a></li>
+                      <li>Buat project baru atau pilih project yang ada</li>
+                      <li>Aktifkan <strong>Google Drive API</strong></li>
+                      <li>Buat <strong>Service Account</strong> dan download kredensial JSON</li>
+                      <li>Bagikan folder Google Drive target ke email Service Account</li>
+                      <li>Masukkan email, private key, dan folder ID di bawah</li>
+                    </ol>
+                  </div>
+                </div>
+              )}
+
+              <Separator />
+
+              {/* Toggle show credentials */}
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowDriveCredentials(!showDriveCredentials)}
+                  className="gap-1.5 text-xs"
+                >
+                  <Key className="w-3 h-3" />
+                  {showDriveCredentials ? 'Sembunyikan Kredensial' : 'Tampilkan Kredensial'}
+                </Button>
+                {hasDriveChange && (
+                  <Badge variant="outline" className="text-[9px] font-medium bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800">
+                    {driveSettingsConfig.filter((c) => isChanged(c.key)).length} perubahan
+                  </Badge>
                 )}
               </div>
-              <div>
-                <Label className="text-sm font-medium">Tampilkan Field Password</Label>
-                <p className="text-xs text-muted-foreground">Tampilkan atau sembunyikan field password saat login</p>
-              </div>
-            </div>
-            <Switch
-              checked={settings.showPasswordLogin !== 'false'}
-              onCheckedChange={(checked) => {
-                handleChange('showPasswordLogin', checked ? 'true' : 'false')
-              }}
-            />
-          </div>
 
-          {/* Login with Google */}
-          <div className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-muted/10">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/30 flex items-center justify-center">
-                <svg className="w-4 h-4" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                </svg>
-              </div>
-              <div>
-                <Label className="text-sm font-medium">Login dengan Google</Label>
-                <p className="text-xs text-muted-foreground">Izinkan pengguna login menggunakan akun Google</p>
-              </div>
-            </div>
-            <Switch
-              checked={settings.loginWithGoogle === 'true'}
-              onCheckedChange={(checked) => {
-                handleChange('loginWithGoogle', checked ? 'true' : 'false')
-              }}
-            />
-          </div>
+              {/* Drive credential fields */}
+              {showDriveCredentials && driveSettingsConfig.map((config, idx) => {
+                const Icon = config.icon
+                const changed = isChanged(config.key)
+                const savingField = saving.has(config.key)
+                const isPrivateKey = config.key === 'googleDrivePrivateKey'
+                const hasExistingValue = !!originalSettings[config.key]
 
-          {/* Google OAuth Configuration - shown when Google login is enabled */}
-          {settings.loginWithGoogle === 'true' && (
-            <div className="space-y-4 ml-2 pl-4 border-l-2 border-red-200 dark:border-red-800">
-              {/* Setup Instructions */}
+                return (
+                  <div key={config.key}>
+                    {idx > 0 && <Separator className="mb-4" />}
+                    <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+                      <div className="flex-1 space-y-1.5">
+                        <div className="flex items-center gap-2">
+                          <Icon className="w-3.5 h-3.5 text-muted-foreground" />
+                          <Label className="text-sm font-medium">{config.label}</Label>
+                          {changed && (
+                            <Badge
+                              variant="outline"
+                              className="text-[9px] font-medium bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800"
+                            >
+                              Diubah
+                            </Badge>
+                          )}
+                          {config.sensitive && hasExistingValue && !changed && (
+                            <Badge variant="outline" className="text-[9px] font-medium bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800">
+                              Terisi
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">{config.description}</p>
+                        {config.type === 'textarea' ? (
+                          <Textarea
+                            placeholder={config.placeholder}
+                            value={isPrivateKey && hasExistingValue && !changed ? '••••••••••••••••' : (settings[config.key] || '')}
+                            onChange={(e) => handleChange(config.key, e.target.value)}
+                            onFocus={() => {
+                              if (isPrivateKey && hasExistingValue && settings[config.key] === originalSettings[config.key]) {
+                                handleChange(config.key, '')
+                              }
+                            }}
+                            rows={4}
+                            className={`resize-y font-mono text-xs overflow-x-auto break-all ${changed ? 'border-amber-300 focus-visible:ring-amber-200' : ''}`}
+                          />
+                        ) : (
+                          <Input
+                            placeholder={config.placeholder}
+                            value={isPrivateKey && hasExistingValue && !changed ? '••••••••••••••••' : (settings[config.key] || '')}
+                            onChange={(e) => handleChange(config.key, e.target.value)}
+                            onFocus={() => {
+                              if (config.sensitive && hasExistingValue && settings[config.key] === originalSettings[config.key]) {
+                                handleChange(config.key, '')
+                              }
+                            }}
+                            className={changed ? 'border-amber-300 focus-visible:ring-amber-200' : ''}
+                          />
+                        )}
+                        {config.key === 'googleDriveFolderId' && (
+                          <p className="text-[11px] text-muted-foreground">
+                            Dapatkan dari URL folder: drive.google.com/drive/folders/<strong className="text-foreground">FOLDER_ID</strong>
+                          </p>
+                        )}
+                      </div>
+                      <Button
+                        size="sm"
+                        variant={changed ? 'default' : 'outline'}
+                        disabled={!changed || savingField}
+                        onClick={() => handleSaveOne(config.key)}
+                        className="gap-1.5 shrink-0 mt-6 sm:mt-0 sm:self-end"
+                      >
+                        {savingField ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : changed ? (
+                          <Save className="w-3.5 h-3.5" />
+                        ) : (
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                        )}
+                        {savingField ? 'Menyimpan...' : changed ? 'Simpan' : 'Tersimpan'}
+                      </Button>
+                    </div>
+                  </div>
+                )
+              })}
+
+              {showDriveCredentials && hasDriveChange && (
+                <div className="flex justify-end">
+                  <Button
+                    onClick={() => handleSaveAll(driveSettingsConfig)}
+                    disabled={saveAllLoading}
+                    size="sm"
+                    className="gap-2"
+                  >
+                    {saveAllLoading ? (
+                      <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Menyimpan...</>
+                    ) : (
+                      <><Save className="w-3.5 h-3.5" /> Simpan Semua Kredensial</>
+                    )}
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab 4: Google Sheets */}
+        <TabsContent value="sheets" className="space-y-4 mt-4">
+          <Card className="border-border/60">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                <Table2 className="w-4 h-4" />
+                Integrasi Google Sheets
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50/50 p-3 dark:border-blue-800 dark:bg-blue-900/10">
                 <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
                 <div className="text-sm text-blue-700 dark:text-blue-300">
-                  <p className="font-medium mb-1">Cara Mengatur Login Google:</p>
-                  <ol className="list-decimal list-inside space-y-0.5 text-xs text-blue-600 dark:text-blue-400">
-                    <li>Buka <a href="https://console.cloud.google.com" target="_blank" rel="noopener noreferrer" className="underline inline-flex items-center gap-0.5">Google Cloud Console <ExternalLink className="w-2.5 h-2.5" /></a></li>
-                    <li>Buat project baru atau pilih project yang ada</li>
-                    <li>Buka menu <strong>APIs & Services → Credentials</strong></li>
-                    <li>Klik <strong>Create Credentials → OAuth client ID</strong></li>
-                    <li>Pilih <strong>Web application</strong> sebagai Application type</li>
-                    <li>Tambahkan <strong>Authorized redirect URI</strong>: <code className="bg-blue-100 dark:bg-blue-800/50 px-1 rounded text-[11px]">{typeof window !== 'undefined' ? window.location.origin : ''}/api/auth/callback/google</code></li>
-                    <li>Copy <strong>Client ID</strong> dan <strong>Client Secret</strong> ke form di bawah</li>
-                  </ol>
+                  <p className="font-medium mb-1">Sinkronkan data ke Google Sheets</p>
+                  <p className="text-xs text-blue-600 dark:text-blue-400">
+                    Data ASN dan hasil pengisian form dapat disinkronkan otomatis ke Google Sheets. Memerlukan konfigurasi Service Account yang sama dengan Google Drive.
+                  </p>
                 </div>
               </div>
 
-              {/* Google Client ID */}
-              <div className="flex flex-col sm:flex-row sm:items-start gap-3">
-                <div className="flex-1 space-y-1.5">
-                  <div className="flex items-center gap-2">
-                    <Key className="w-3.5 h-3.5 text-muted-foreground" />
-                    <Label className="text-sm font-medium">Google Client ID</Label>
-                    {isChanged('googleLoginClientId') && (
-                      <Badge
-                        variant="outline"
-                        className="text-[9px] font-medium bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800"
-                      >
-                        Diubah
-                      </Badge>
-                    )}
-                    {!!originalSettings.googleLoginClientId && !isChanged('googleLoginClientId') && (
-                      <Badge variant="outline" className="text-[9px] font-medium bg-gray-50 text-gray-500 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700">
-                        Terisi
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">OAuth Client ID dari Google Cloud Console</p>
-                  <Input
-                    placeholder="123456789-abc.apps.googleusercontent.com"
-                    value={settings.googleLoginClientId || ''}
-                    onChange={(e) => handleChange('googleLoginClientId', e.target.value)}
-                    className={isChanged('googleLoginClientId') ? 'border-amber-300 focus-visible:ring-amber-200' : ''}
-                  />
-                </div>
-                <Button
-                  size="sm"
-                  variant={isChanged('googleLoginClientId') ? 'default' : 'outline'}
-                  disabled={!isChanged('googleLoginClientId') || saving.has('googleLoginClientId')}
-                  onClick={() => handleSaveOne('googleLoginClientId')}
-                  className="gap-1.5 shrink-0 sm:self-end"
-                >
-                  {saving.has('googleLoginClientId') ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                  {saving.has('googleLoginClientId') ? 'Menyimpan...' : isChanged('googleLoginClientId') ? 'Simpan' : 'Tersimpan'}
-                </Button>
-              </div>
-
-              {/* Google Client Secret */}
-              <div className="flex flex-col sm:flex-row sm:items-start gap-3">
-                <div className="flex-1 space-y-1.5">
-                  <div className="flex items-center gap-2">
-                    <Key className="w-3.5 h-3.5 text-muted-foreground" />
-                    <Label className="text-sm font-medium">Google Client Secret</Label>
-                    {isChanged('googleLoginClientSecret') && (
-                      <Badge
-                        variant="outline"
-                        className="text-[9px] font-medium bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800"
-                      >
-                        Diubah
-                      </Badge>
-                    )}
-                    {!!originalSettings.googleLoginClientSecret && !isChanged('googleLoginClientSecret') && (
-                      <Badge variant="outline" className="text-[9px] font-medium bg-gray-50 text-gray-500 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700">
-                        Terisi
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">OAuth Client Secret dari Google Cloud Console</p>
-                  <div className="relative">
-                    <Input
-                      type={showGoogleClientSecret ? 'text' : 'password'}
-                      placeholder="GOCSPX-xxxxxxxxxxxxxxxxx"
-                      value={originalSettings.googleLoginClientSecret && !isChanged('googleLoginClientSecret') ? '••••••••••••••••' : (settings.googleLoginClientSecret || '')}
-                      onChange={(e) => handleChange('googleLoginClientSecret', e.target.value)}
-                      onFocus={() => {
-                        if (originalSettings.googleLoginClientSecret && settings.googleLoginClientSecret === originalSettings.googleLoginClientSecret) {
-                          handleChange('googleLoginClientSecret', '')
-                        }
-                      }}
-                      className={`pr-10 ${isChanged('googleLoginClientSecret') ? 'border-amber-300 focus-visible:ring-amber-200' : ''}`}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowGoogleClientSecret(!showGoogleClientSecret)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                      tabIndex={-1}
-                    >
-                      {showGoogleClientSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-                <Button
-                  size="sm"
-                  variant={isChanged('googleLoginClientSecret') ? 'default' : 'outline'}
-                  disabled={!isChanged('googleLoginClientSecret') || saving.has('googleLoginClientSecret')}
-                  onClick={() => handleSaveOne('googleLoginClientSecret')}
-                  className="gap-1.5 shrink-0 sm:self-end"
-                >
-                  {saving.has('googleLoginClientSecret') ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                  {saving.has('googleLoginClientSecret') ? 'Menyimpan...' : isChanged('googleLoginClientSecret') ? 'Simpan' : 'Tersimpan'}
-                </Button>
-              </div>
-
-              {/* Configuration Status */}
+              {/* Sheets configuration status */}
               {(() => {
-                const hasClientId = !!(settings.googleLoginClientId || '').trim()
-                const hasClientSecret = !!(settings.googleLoginClientSecret || '').trim()
-                const isFullyConfigured = hasClientId && hasClientSecret
+                const hasApiKey = !!(settings.googleSheetsApiKey || '').trim()
+                const hasSpreadsheetId = !!(settings.googleSheetsSpreadsheetId || '').trim()
+                const isSheetsConfigured = hasApiKey && hasSpreadsheetId
                 return (
                   <div className={`flex items-center gap-2 rounded-lg border p-2.5 ${
-                    isFullyConfigured
+                    isSheetsConfigured
                       ? 'border-emerald-200 bg-emerald-50/50 dark:border-emerald-800 dark:bg-emerald-900/10'
                       : 'border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-900/10'
                   }`}>
-                    {isFullyConfigured ? (
+                    {isSheetsConfigured ? (
                       <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                     ) : (
                       <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
                     )}
                     <span className={`text-xs font-medium ${
-                      isFullyConfigured
+                      isSheetsConfigured
                         ? 'text-emerald-700 dark:text-emerald-300'
                         : 'text-amber-700 dark:text-amber-300'
                     }`}>
-                      {isFullyConfigured
-                        ? 'Google OAuth terkonfigurasi. Login Google akan aktif setelah disimpan.'
-                        : !hasClientId && !hasClientSecret
-                          ? 'Client ID dan Client Secret belum diisi. Login Google tidak akan berfungsi.'
-                          : !hasClientId
-                            ? 'Client ID belum diisi.'
-                            : 'Client Secret belum diisi.'
+                      {isSheetsConfigured
+                        ? 'Google Sheets terkonfigurasi.'
+                        : !hasApiKey && !hasSpreadsheetId
+                          ? 'API Key dan Spreadsheet ID belum diisi.'
+                          : !hasApiKey
+                            ? 'API Key belum diisi.'
+                            : 'Spreadsheet ID belum diisi.'
                       }
                     </span>
                   </div>
                 )
               })()}
-            </div>
-          )}
 
-          {(isChanged('loginWithNip') || isChanged('loginWithGoogle') || isChanged('showPasswordLogin') || isChanged('googleLoginClientId') || isChanged('googleLoginClientSecret')) && (
-            <div className="flex justify-end">
-              <Button
-                onClick={async () => {
-                  const loginSettings: SettingsMap = {}
-                  if (isChanged('loginWithNip')) loginSettings.loginWithNip = settings.loginWithNip || 'true'
-                  if (isChanged('loginWithGoogle')) loginSettings.loginWithGoogle = settings.loginWithGoogle || 'false'
-                  if (isChanged('showPasswordLogin')) loginSettings.showPasswordLogin = settings.showPasswordLogin || 'true'
-                  if (isChanged('googleLoginClientId')) loginSettings.googleLoginClientId = settings.googleLoginClientId || ''
-                  if (isChanged('googleLoginClientSecret')) loginSettings.googleLoginClientSecret = settings.googleLoginClientSecret || ''
-                  try {
-                    const res = await fetch('/api/settings', {
-                      method: 'PUT',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ settings: loginSettings, userId }),
-                    })
-                    if (res.ok) {
-                      setOriginalSettings({ ...settings })
-                      addNotification('Pengaturan login berhasil disimpan', 'success')
-                    }
-                  } catch {
-                    addNotification('Gagal menyimpan pengaturan login', 'error')
-                  }
-                }}
-                size="sm"
-                className="gap-2"
-              >
-                <Save className="w-3.5 h-3.5" />
-                Simpan Pengaturan Login
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Google Sheets Integration */}
-      <Card className="border-border/60">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
-            <Table2 className="w-4 h-4" />
-            Integrasi Google Sheets
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50/50 p-3 dark:border-blue-800 dark:bg-blue-900/10">
-            <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-            <div className="text-sm text-blue-700 dark:text-blue-300">
-              <p className="font-medium mb-1">Sinkronkan data ke Google Sheets</p>
-              <p className="text-xs text-blue-600 dark:text-blue-400">
-                Data ASN dan hasil pengisian form dapat disinkronkan otomatis ke Google Sheets. Memerlukan konfigurasi Service Account yang sama dengan Google Drive.
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-start gap-3">
-              <div className="flex-1 space-y-1.5">
-                <div className="flex items-center gap-2">
-                  <Key className="w-3.5 h-3.5 text-muted-foreground" />
-                  <Label className="text-sm font-medium">Google Sheets API Key</Label>
-                </div>
-                <p className="text-xs text-muted-foreground">API Key untuk akses read-only ke Google Sheets</p>
-                <Input
-                  placeholder="AIzaSy..."
-                  value={settings.googleSheetsApiKey || ''}
-                  onChange={(e) => handleChange('googleSheetsApiKey', e.target.value)}
-                  className={isChanged('googleSheetsApiKey') ? 'border-amber-300 focus-visible:ring-amber-200' : ''}
-                />
-              </div>
-              <Button
-                size="sm"
-                variant={isChanged('googleSheetsApiKey') ? 'default' : 'outline'}
-                disabled={!isChanged('googleSheetsApiKey') || saving.has('googleSheetsApiKey')}
-                onClick={() => handleSaveOne('googleSheetsApiKey')}
-                className="gap-1.5 shrink-0 sm:self-end"
-              >
-                {saving.has('googleSheetsApiKey') ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                {saving.has('googleSheetsApiKey') ? 'Menyimpan...' : isChanged('googleSheetsApiKey') ? 'Simpan' : 'Tersimpan'}
-              </Button>
-            </div>
-
-            <div className="flex flex-col sm:flex-row sm:items-start gap-3">
-              <div className="flex-1 space-y-1.5">
-                <div className="flex items-center gap-2">
-                  <Table2 className="w-3.5 h-3.5 text-muted-foreground" />
-                  <Label className="text-sm font-medium">Spreadsheet ID</Label>
-                </div>
-                <p className="text-xs text-muted-foreground">ID dari URL Google Sheets yang menjadi target sinkronisasi</p>
-                <Input
-                  placeholder="1aBcDeFgHiJkLmNoPqRsTuVwXyZ..."
-                  value={settings.googleSheetsSpreadsheetId || ''}
-                  onChange={(e) => handleChange('googleSheetsSpreadsheetId', e.target.value)}
-                  className={isChanged('googleSheetsSpreadsheetId') ? 'border-amber-300 focus-visible:ring-amber-200' : ''}
-                />
-                <p className="text-[11px] text-muted-foreground">
-                  Dapatkan dari URL: docs.google.com/spreadsheets/d/<strong className="text-foreground">SPREADSHEET_ID</strong>/edit
-                </p>
-              </div>
-              <Button
-                size="sm"
-                variant={isChanged('googleSheetsSpreadsheetId') ? 'default' : 'outline'}
-                disabled={!isChanged('googleSheetsSpreadsheetId') || saving.has('googleSheetsSpreadsheetId')}
-                onClick={() => handleSaveOne('googleSheetsSpreadsheetId')}
-                className="gap-1.5 shrink-0 sm:self-end"
-              >
-                {saving.has('googleSheetsSpreadsheetId') ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                {saving.has('googleSheetsSpreadsheetId') ? 'Menyimpan...' : isChanged('googleSheetsSpreadsheetId') ? 'Simpan' : 'Tersimpan'}
-              </Button>
-            </div>
-
-            <div className="flex flex-col sm:flex-row sm:items-start gap-3">
-              <div className="flex-1 space-y-1.5">
-                <div className="flex items-center gap-2">
-                  <FileText className="w-3.5 h-3.5 text-muted-foreground" />
-                  <Label className="text-sm font-medium">Nama Sheet Default</Label>
-                </div>
-                <p className="text-xs text-muted-foreground">Nama sheet/tab di Google Sheets untuk data ASN</p>
-                <Input
-                  placeholder="Sheet1"
-                  value={settings.googleSheetsSheetName || ''}
-                  onChange={(e) => handleChange('googleSheetsSheetName', e.target.value)}
-                  className={isChanged('googleSheetsSheetName') ? 'border-amber-300 focus-visible:ring-amber-200' : ''}
-                />
-              </div>
-              <Button
-                size="sm"
-                variant={isChanged('googleSheetsSheetName') ? 'default' : 'outline'}
-                disabled={!isChanged('googleSheetsSheetName') || saving.has('googleSheetsSheetName')}
-                onClick={() => handleSaveOne('googleSheetsSheetName')}
-                className="gap-1.5 shrink-0 sm:self-end"
-              >
-                {saving.has('googleSheetsSheetName') ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                {saving.has('googleSheetsSheetName') ? 'Menyimpan...' : isChanged('googleSheetsSheetName') ? 'Simpan' : 'Tersimpan'}
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Google Drive Integration Section */}
-      <Card className="border-border/60">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
-              <HardDrive className="w-4 h-4" />
-              Integrasi Google Drive
-            </CardTitle>
-            <div className="flex items-center gap-2">
-              {/* Connection status badge */}
-              {driveStatus && (
-                <Badge
-                  variant="outline"
-                  className={`text-[10px] ${
-                    driveStatus.connected
-                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800'
-                      : driveStatus.configured
-                        ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800'
-                        : 'bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-900/20 dark:text-gray-400 dark:border-gray-800'
-                  }`}
-                >
-                  {driveStatus.connected ? (
-                    <><Cloud className="w-3 h-3 mr-1" /> Terhubung</>
-                  ) : driveStatus.configured ? (
-                    <><CloudOff className="w-3 h-3 mr-1" /> Gagal Terhubung</>
-                  ) : (
-                    <><CloudOff className="w-3 h-3 mr-1" /> Belum Dikonfigurasi</>
-                  )}
-                </Badge>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={checkDriveStatus}
-                disabled={testingDrive}
-                className="h-7 gap-1.5 text-xs"
-              >
-                <RefreshCw className={`w-3 h-3 ${testingDrive ? 'animate-spin' : ''}`} />
-                Tes Koneksi
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Connection info */}
-          {driveStatus && driveStatus.connected && driveStatus.folder && (
-            <div className="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 dark:border-emerald-800 dark:bg-emerald-900/10">
-              <FolderOpen className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300 truncate">
-                  {driveStatus.folder.name}
-                </p>
-                <p className="text-[11px] text-emerald-600/70 dark:text-emerald-400/70">
-                  ID: {driveStatus.folder.id}
-                </p>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 gap-1.5 text-xs shrink-0"
-                onClick={() => setDriveFilesDialogOpen(true)}
-              >
-                <FileText className="w-3 h-3" />
-                Lihat File
-              </Button>
-            </div>
-          )}
-
-          {driveStatus && !driveStatus.connected && driveStatus.configured && (
-            <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50/50 p-3 dark:border-red-800 dark:bg-red-900/10">
-              <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0" />
-              <p className="text-sm text-red-700 dark:text-red-300">{driveStatus.message}</p>
-            </div>
-          )}
-
-          {driveStatus && !driveStatus.configured && (
-            <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50/50 p-3 dark:border-blue-800 dark:bg-blue-900/10">
-              <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-              <div className="text-sm text-blue-700 dark:text-blue-300">
-                <p className="font-medium mb-1">Cara Mengatur Google Drive:</p>
-                <ol className="list-decimal list-inside space-y-0.5 text-xs text-blue-600 dark:text-blue-400">
-                  <li>Buka <a href="https://console.cloud.google.com" target="_blank" rel="noopener noreferrer" className="underline inline-flex items-center gap-0.5">Google Cloud Console <ExternalLink className="w-2.5 h-2.5" /></a></li>
-                  <li>Buat project baru atau pilih project yang ada</li>
-                  <li>Aktifkan <strong>Google Drive API</strong></li>
-                  <li>Buat <strong>Service Account</strong> dan download kredensial JSON</li>
-                  <li>Bagikan folder Google Drive target ke email Service Account</li>
-                  <li>Masukkan email, private key, dan folder ID di bawah</li>
-                </ol>
-              </div>
-            </div>
-          )}
-
-          <Separator />
-
-          {/* Toggle show credentials */}
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowDriveCredentials(!showDriveCredentials)}
-              className="gap-1.5 text-xs"
-            >
-              <Key className="w-3 h-3" />
-              {showDriveCredentials ? 'Sembunyikan Kredensial' : 'Tampilkan Kredensial'}
-            </Button>
-            {hasDriveChange && (
-              <Badge variant="outline" className="text-[9px] font-medium bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800">
-                {driveSettingsConfig.filter((c) => isChanged(c.key)).length} perubahan
-              </Badge>
-            )}
-          </div>
-
-          {/* Drive credential fields */}
-          {showDriveCredentials && driveSettingsConfig.map((config, idx) => {
-            const Icon = config.icon
-            const changed = isChanged(config.key)
-            const savingField = saving.has(config.key)
-            const isPrivateKey = config.key === 'googleDrivePrivateKey'
-            const hasExistingValue = !!originalSettings[config.key]
-
-            return (
-              <div key={config.key}>
-                {idx > 0 && <Separator className="mb-4" />}
+              <div className="space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-start gap-3">
                   <div className="flex-1 space-y-1.5">
                     <div className="flex items-center gap-2">
-                      <Icon className="w-3.5 h-3.5 text-muted-foreground" />
-                      <Label className="text-sm font-medium">{config.label}</Label>
-                      {changed && (
+                      <Key className="w-3.5 h-3.5 text-muted-foreground" />
+                      <Label className="text-sm font-medium">Google Sheets API Key</Label>
+                      {isChanged('googleSheetsApiKey') && (
                         <Badge
                           variant="outline"
                           className="text-[9px] font-medium bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800"
@@ -978,165 +1102,239 @@ export default function AdminSettings() {
                           Diubah
                         </Badge>
                       )}
-                      {config.sensitive && hasExistingValue && !changed && (
-                        <Badge variant="outline" className="text-[9px] font-medium bg-gray-50 text-gray-500 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700">
+                      {!!originalSettings.googleSheetsApiKey && !isChanged('googleSheetsApiKey') && (
+                        <Badge variant="outline" className="text-[9px] font-medium bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800">
                           Terisi
                         </Badge>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground">{config.description}</p>
-                    {config.type === 'textarea' ? (
-                      <Textarea
-                        placeholder={config.placeholder}
-                        value={isPrivateKey && hasExistingValue && !changed ? '••••••••••••••••' : (settings[config.key] || '')}
-                        onChange={(e) => handleChange(config.key, e.target.value)}
-                        onFocus={() => {
-                          if (isPrivateKey && hasExistingValue && settings[config.key] === originalSettings[config.key]) {
-                            handleChange(config.key, '')
-                          }
-                        }}
-                        rows={4}
-                        className={`resize-y font-mono text-xs ${changed ? 'border-amber-300 focus-visible:ring-amber-200' : ''}`}
-                      />
-                    ) : (
-                      <Input
-                        placeholder={config.placeholder}
-                        value={isPrivateKey && hasExistingValue && !changed ? '••••••••••••••••' : (settings[config.key] || '')}
-                        onChange={(e) => handleChange(config.key, e.target.value)}
-                        onFocus={() => {
-                          if (config.sensitive && hasExistingValue && settings[config.key] === originalSettings[config.key]) {
-                            handleChange(config.key, '')
-                          }
-                        }}
-                        className={changed ? 'border-amber-300 focus-visible:ring-amber-200' : ''}
-                      />
-                    )}
-                    {config.key === 'googleDriveFolderId' && (
-                      <p className="text-[11px] text-muted-foreground">
-                        Dapatkan dari URL folder: drive.google.com/drive/folders/<strong className="text-foreground">FOLDER_ID</strong>
-                      </p>
-                    )}
+                    <p className="text-xs text-muted-foreground">API Key untuk akses read-only ke Google Sheets</p>
+                    <Input
+                      placeholder="AIzaSy..."
+                      value={settings.googleSheetsApiKey || ''}
+                      onChange={(e) => handleChange('googleSheetsApiKey', e.target.value)}
+                      className={isChanged('googleSheetsApiKey') ? 'border-amber-300 focus-visible:ring-amber-200' : ''}
+                    />
                   </div>
                   <Button
                     size="sm"
-                    variant={changed ? 'default' : 'outline'}
-                    disabled={!changed || savingField}
-                    onClick={() => handleSaveOne(config.key)}
-                    className="gap-1.5 shrink-0 mt-6 sm:mt-0 sm:self-end"
+                    variant={isChanged('googleSheetsApiKey') ? 'default' : 'outline'}
+                    disabled={!isChanged('googleSheetsApiKey') || saving.has('googleSheetsApiKey')}
+                    onClick={() => handleSaveOne('googleSheetsApiKey')}
+                    className="gap-1.5 shrink-0 sm:self-end"
                   >
-                    {savingField ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : changed ? (
-                      <Save className="w-3.5 h-3.5" />
-                    ) : (
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                    )}
-                    {savingField ? 'Menyimpan...' : changed ? 'Simpan' : 'Tersimpan'}
+                    {saving.has('googleSheetsApiKey') ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                    {saving.has('googleSheetsApiKey') ? 'Menyimpan...' : isChanged('googleSheetsApiKey') ? 'Simpan' : 'Tersimpan'}
+                  </Button>
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+                  <div className="flex-1 space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <Table2 className="w-3.5 h-3.5 text-muted-foreground" />
+                      <Label className="text-sm font-medium">Spreadsheet ID</Label>
+                      {isChanged('googleSheetsSpreadsheetId') && (
+                        <Badge
+                          variant="outline"
+                          className="text-[9px] font-medium bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800"
+                        >
+                          Diubah
+                        </Badge>
+                      )}
+                      {!!originalSettings.googleSheetsSpreadsheetId && !isChanged('googleSheetsSpreadsheetId') && (
+                        <Badge variant="outline" className="text-[9px] font-medium bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800">
+                          Terisi
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">ID dari URL Google Sheets yang menjadi target sinkronisasi</p>
+                    <Input
+                      placeholder="1aBcDeFgHiJkLmNoPqRsTuVwXyZ..."
+                      value={settings.googleSheetsSpreadsheetId || ''}
+                      onChange={(e) => handleChange('googleSheetsSpreadsheetId', e.target.value)}
+                      className={isChanged('googleSheetsSpreadsheetId') ? 'border-amber-300 focus-visible:ring-amber-200' : ''}
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      Dapatkan dari URL: docs.google.com/spreadsheets/d/<strong className="text-foreground">SPREADSHEET_ID</strong>/edit
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant={isChanged('googleSheetsSpreadsheetId') ? 'default' : 'outline'}
+                    disabled={!isChanged('googleSheetsSpreadsheetId') || saving.has('googleSheetsSpreadsheetId')}
+                    onClick={() => handleSaveOne('googleSheetsSpreadsheetId')}
+                    className="gap-1.5 shrink-0 sm:self-end"
+                  >
+                    {saving.has('googleSheetsSpreadsheetId') ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                    {saving.has('googleSheetsSpreadsheetId') ? 'Menyimpan...' : isChanged('googleSheetsSpreadsheetId') ? 'Simpan' : 'Tersimpan'}
+                  </Button>
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+                  <div className="flex-1 space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-3.5 h-3.5 text-muted-foreground" />
+                      <Label className="text-sm font-medium">Nama Sheet Default</Label>
+                      {isChanged('googleSheetsSheetName') && (
+                        <Badge
+                          variant="outline"
+                          className="text-[9px] font-medium bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800"
+                        >
+                          Diubah
+                        </Badge>
+                      )}
+                      {!!originalSettings.googleSheetsSheetName && !isChanged('googleSheetsSheetName') && (
+                        <Badge variant="outline" className="text-[9px] font-medium bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800">
+                          Terisi
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Nama sheet/tab di Google Sheets untuk data ASN</p>
+                    <Input
+                      placeholder="Sheet1"
+                      value={settings.googleSheetsSheetName || ''}
+                      onChange={(e) => handleChange('googleSheetsSheetName', e.target.value)}
+                      className={isChanged('googleSheetsSheetName') ? 'border-amber-300 focus-visible:ring-amber-200' : ''}
+                    />
+                  </div>
+                  <Button
+                    size="sm"
+                    variant={isChanged('googleSheetsSheetName') ? 'default' : 'outline'}
+                    disabled={!isChanged('googleSheetsSheetName') || saving.has('googleSheetsSheetName')}
+                    onClick={() => handleSaveOne('googleSheetsSheetName')}
+                    className="gap-1.5 shrink-0 sm:self-end"
+                  >
+                    {saving.has('googleSheetsSheetName') ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                    {saving.has('googleSheetsSheetName') ? 'Menyimpan...' : isChanged('googleSheetsSheetName') ? 'Simpan' : 'Tersimpan'}
                   </Button>
                 </div>
               </div>
-            )
-          })}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-          {showDriveCredentials && hasDriveChange && (
-            <div className="flex justify-end">
+        {/* Tab 5: Lainnya */}
+        <TabsContent value="lainnya" className="space-y-4 mt-4">
+          {/* Setup Wizard Card */}
+          <Card className="border-border/60">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                <Sparkles className="w-4 h-4" />
+                Setup Wizard
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Jalankan kembali Setup Wizard untuk mengkonfigurasi ulang sistem dari awal. Ini akan mengatur ulang status setup tetapi tidak menghapus data yang sudah ada.
+              </p>
               <Button
-                onClick={() => handleSaveAll(driveSettingsConfig)}
-                disabled={saveAllLoading}
+                variant="outline"
                 size="sm"
                 className="gap-2"
+                onClick={async () => {
+                  try {
+                    await fetch('/api/settings', {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        settings: { setupCompleted: 'false' },
+                        userId,
+                      }),
+                    })
+                    addNotification('Setup Wizard akan ditampilkan saat login berikutnya', 'success')
+                  } catch {
+                    addNotification('Gagal mengatur ulang setup', 'error')
+                  }
+                }}
               >
-                {saveAllLoading ? (
-                  <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Menyimpan...</>
-                ) : (
-                  <><Save className="w-3.5 h-3.5" /> Simpan Semua Kredensial</>
-                )}
+                <Sparkles className="w-3.5 h-3.5" />
+                Jalankan Setup Wizard
               </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
 
-      {/* Preview Card */}
-      <Card className="border-border/60 bg-gradient-to-br from-[oklch(0.22_0.06_250)] to-[oklch(0.28_0.07_250)] text-white">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-white/70 flex items-center gap-2">
-            <Settings className="w-4 h-4" />
-            Pratinjau
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center">
-              <img
-                src="/logo.svg"
-                alt="Logo BKAD"
-                className="w-8 h-8 object-contain brightness-0 invert"
-              />
-            </div>
-            <div>
-              <h3 className="font-bold text-base">
-                {settings.appShortName || 'SIDATA BKAD'}
-              </h3>
-              <p className="text-[10px] text-white/50">
-                {settings.daerah || 'Kabupaten Seruyan'}
-              </p>
-            </div>
-          </div>
-          <Separator className="bg-white/10 mb-4" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-white/70">
-            <div>
-              <span className="text-white/40 block mb-0.5">Nama Aplikasi</span>
-              <span className="text-white/90">{settings.appName || 'Sistem Pengumpulan Data ASN'}</span>
-            </div>
-            <div>
-              <span className="text-white/40 block mb-0.5">Instansi</span>
-              <span className="text-white/90">{settings.instansiName || 'BKAD'}</span>
-            </div>
-            <div>
-              <span className="text-white/40 block mb-0.5">Email</span>
-              <span className="text-white/90">{settings.instansiEmail || '-'}</span>
-            </div>
-            <div>
-              <span className="text-white/40 block mb-0.5">Telepon</span>
-              <span className="text-white/90">{settings.instansiPhone || '-'}</span>
-            </div>
-            <div className="sm:col-span-2">
-              <span className="text-white/40 block mb-0.5">Alamat</span>
-              <span className="text-white/90">{settings.instansiAddress || '-'}</span>
-            </div>
-            <div className="sm:col-span-2">
-              <span className="text-white/40 block mb-0.5">Google Drive</span>
-              <span className="text-white/90 flex items-center gap-1.5">
-                {driveStatus?.connected ? (
-                  <><Cloud className="w-3.5 h-3.5 text-emerald-400" /> Terhubung - {driveStatus.folder?.name}</>
-                ) : driveStatus?.configured ? (
-                  <><CloudOff className="w-3.5 h-3.5 text-red-400" /> Tidak terhubung</>
-                ) : (
-                  <><CloudOff className="w-3.5 h-3.5 text-white/40" /> Belum dikonfigurasi</>
-                )}
-              </span>
-            </div>
-            <div className="sm:col-span-2">
-              <span className="text-white/40 block mb-0.5">Google Sheets</span>
-              <span className="text-white/90 flex items-center gap-1.5">
-                {settings.googleSheetsSpreadsheetId ? (
-                  <><Table2 className="w-3.5 h-3.5 text-emerald-400" /> Dikonfigurasi</>
-                ) : (
-                  <><Table2 className="w-3.5 h-3.5 text-white/40" /> Belum dikonfigurasi</>
-                )}
-              </span>
-            </div>
-            <div className="sm:col-span-2">
-              <span className="text-white/40 block mb-0.5">Metode Login</span>
-              <span className="text-white/90 flex items-center gap-2">
-                {settings.loginWithNip !== 'false' && <Badge variant="outline" className="text-[9px] text-white/80 border-white/20">NIP/Password</Badge>}
-                {settings.loginWithGoogle === 'true' && <Badge variant="outline" className="text-[9px] text-white/80 border-white/20">Google</Badge>}
-              </span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          {/* Preview Card */}
+          <Card className="border-border/60 bg-gradient-to-br from-[oklch(0.22_0.06_250)] to-[oklch(0.28_0.07_250)] text-white">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold text-white/70 flex items-center gap-2">
+                <Settings className="w-4 h-4" />
+                Pratinjau
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center">
+                  <img
+                    src="/logo.svg"
+                    alt="Logo BKAD"
+                    className="w-8 h-8 object-contain brightness-0 invert"
+                  />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base">
+                    {settings.appShortName || 'SIDATA BKAD'}
+                  </h3>
+                  <p className="text-[10px] text-white/50">
+                    {settings.daerah || 'Kabupaten Seruyan'}
+                  </p>
+                </div>
+              </div>
+              <Separator className="bg-white/10 mb-4" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-white/70">
+                <div>
+                  <span className="text-white/40 block mb-0.5">Nama Aplikasi</span>
+                  <span className="text-white/90">{settings.appName || 'Sistem Pengumpulan Data ASN'}</span>
+                </div>
+                <div>
+                  <span className="text-white/40 block mb-0.5">Instansi</span>
+                  <span className="text-white/90">{settings.instansiName || 'BKAD'}</span>
+                </div>
+                <div>
+                  <span className="text-white/40 block mb-0.5">Email</span>
+                  <span className="text-white/90">{settings.instansiEmail || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-white/40 block mb-0.5">Telepon</span>
+                  <span className="text-white/90">{settings.instansiPhone || '-'}</span>
+                </div>
+                <div className="sm:col-span-2">
+                  <span className="text-white/40 block mb-0.5">Alamat</span>
+                  <span className="text-white/90">{settings.instansiAddress || '-'}</span>
+                </div>
+                <div className="sm:col-span-2">
+                  <span className="text-white/40 block mb-0.5">Google Drive</span>
+                  <span className="text-white/90 flex items-center gap-1.5">
+                    {driveStatus?.connected ? (
+                      <><Cloud className="w-3.5 h-3.5 text-emerald-400" /> Terhubung - {driveStatus.folder?.name}</>
+                    ) : driveStatus?.configured ? (
+                      <><CloudOff className="w-3.5 h-3.5 text-red-400" /> Tidak terhubung</>
+                    ) : (
+                      <><CloudOff className="w-3.5 h-3.5 text-white/40" /> Belum dikonfigurasi</>
+                    )}
+                  </span>
+                </div>
+                <div className="sm:col-span-2">
+                  <span className="text-white/40 block mb-0.5">Google Sheets</span>
+                  <span className="text-white/90 flex items-center gap-1.5">
+                    {settings.googleSheetsSpreadsheetId ? (
+                      <><Table2 className="w-3.5 h-3.5 text-emerald-400" /> Dikonfigurasi</>
+                    ) : (
+                      <><Table2 className="w-3.5 h-3.5 text-white/40" /> Belum dikonfigurasi</>
+                    )}
+                  </span>
+                </div>
+                <div className="sm:col-span-2">
+                  <span className="text-white/40 block mb-0.5">Metode Login</span>
+                  <span className="text-white/90 flex items-center gap-2">
+                    {settings.loginWithNip !== 'false' && <Badge variant="outline" className="text-[9px] text-white/80 border-white/20">NIP/Password</Badge>}
+                    {settings.loginWithGoogle === 'true' && <Badge variant="outline" className="text-[9px] text-white/80 border-white/20">Google</Badge>}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Drive Files Dialog */}
       <Dialog open={driveFilesDialogOpen} onOpenChange={setDriveFilesDialogOpen}>
@@ -1202,44 +1400,6 @@ export default function AdminSettings() {
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Setup Wizard Card */}
-      <Card className="border-border/60">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
-            <Sparkles className="w-4 h-4" />
-            Setup Wizard
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-xs text-muted-foreground">
-            Jalankan kembali Setup Wizard untuk mengkonfigurasi ulang sistem dari awal. Ini akan mengatur ulang status setup tetapi tidak menghapus data yang sudah ada.
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2"
-            onClick={async () => {
-              try {
-                await fetch('/api/settings', {
-                  method: 'PUT',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    settings: { setupCompleted: 'false' },
-                    userId,
-                  }),
-                })
-                addNotification('Setup Wizard akan ditampilkan saat login berikutnya', 'success')
-              } catch {
-                addNotification('Gagal mengatur ulang setup', 'error')
-              }
-            }}
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            Jalankan Setup Wizard
-          </Button>
-        </CardContent>
-      </Card>
     </div>
   )
 }
