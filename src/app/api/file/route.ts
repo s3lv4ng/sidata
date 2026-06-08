@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { readFile, stat } from 'fs/promises'
+import { resolveFilePath } from '@/lib/upload-utils'
 import path from 'path'
 
 // GET /api/file?path=xxx - Serve an uploaded file
@@ -17,15 +17,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid path' }, { status: 403 })
     }
 
-    const fullPath = path.join(process.cwd(), normalizedPath)
+    // Resolve file path (checks both primary and /tmp directories)
+    const fullPath = await resolveFilePath(normalizedPath)
 
-    // Check if file exists
-    try {
-      await stat(fullPath)
-    } catch {
+    if (!fullPath) {
       return NextResponse.json({ error: 'File not found' }, { status: 404 })
     }
 
+    // Dynamic import to avoid issues
+    const { readFile } = await import('fs/promises')
     const fileBuffer = await readFile(fullPath)
 
     // Determine content type from extension
@@ -37,6 +37,7 @@ export async function GET(request: NextRequest) {
       '.gif': 'image/gif',
       '.webp': 'image/webp',
       '.svg': 'image/svg+xml',
+      '.ico': 'image/x-icon',
       '.pdf': 'application/pdf',
       '.doc': 'application/msword',
       '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',

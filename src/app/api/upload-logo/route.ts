@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { writeFile, mkdir } from 'fs/promises'
-import path from 'path'
 import { db } from '@/lib/db'
 import { invalidateSettingsCache } from '@/lib/auth'
+import { saveUploadedFile } from '@/lib/upload-utils'
 
 const MAX_LOGO_SIZE = 2 * 1024 * 1024 // 2MB for logos
 const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/webp', 'image/x-icon', 'image/vnd.microsoft.icon']
@@ -38,7 +37,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // For favicon, prefer ico/png. For logo, prefer png/svg
+    // Generate filename
     const timestamp = Date.now()
     const randomSuffix = Math.random().toString(36).substring(2, 8)
 
@@ -55,23 +54,18 @@ export async function POST(request: NextRequest) {
       filename = `logo_${timestamp}_${randomSuffix}${ext}`
     }
 
-    // Save to upload directory
-    const uploadDir = path.join(process.cwd(), 'upload')
-    await mkdir(uploadDir, { recursive: true })
-
-    const filePath = path.join(uploadDir, filename)
+    // Save file using upload utils (handles read-only filesystem)
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
-    await writeFile(filePath, buffer)
+    const { accessPath } = await saveUploadedFile(buffer, filename, 'brand')
 
     // Store path in settings
-    const relativePath = `/api/file?path=/upload/${filename}`
     const settingKey = type === 'logo' ? 'appLogo' : 'appFavicon'
 
     await db.systemSetting.upsert({
       where: { key: settingKey },
-      update: { value: relativePath },
-      create: { key: settingKey, value: relativePath },
+      update: { value: accessPath },
+      create: { key: settingKey, value: accessPath },
     })
 
     // Invalidate settings cache
@@ -95,7 +89,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         fileName: file.name,
-        filePath: relativePath,
+        filePath: accessPath,
         fileSize: file.size,
         mimeType: file.type,
         settingKey,
@@ -103,7 +97,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     )
   } catch (error: any) {
-    console.error('Logo upload error:', error)
+    console.error('Upload brand error:', error)
     return NextResponse.json({ error: error.message || 'Gagal mengunggah file' }, { status: 500 })
   }
 }

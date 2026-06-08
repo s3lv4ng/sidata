@@ -79,6 +79,7 @@ export async function getAuthOptions(): Promise<NextAuthOptions> {
           email: user.email,
           role: user.role,
           nip: user.nip,
+          bidang: user.bidang,
         };
       },
     }),
@@ -148,6 +149,7 @@ export async function getAuthOptions(): Promise<NextAuthOptions> {
             (user as any).role = existingUser.role;
             (user as any).nip = existingUser.nip;
             (user as any).id = existingUser.id;
+            (user as any).bidang = existingUser.bidang;
 
             db.activityLog.create({
               data: {
@@ -171,6 +173,7 @@ export async function getAuthOptions(): Promise<NextAuthOptions> {
           token.role = (user as any).role;
           token.nip = (user as any).nip;
           token.userId = user.id;
+          token.bidang = (user as any).bidang;
         }
         return token;
       },
@@ -179,6 +182,7 @@ export async function getAuthOptions(): Promise<NextAuthOptions> {
           (session.user as any).role = token.role;
           (session.user as any).nip = token.nip;
           (session.user as any).id = token.userId;
+          (session.user as any).bidang = token.bidang;
         }
         return session;
       },
@@ -239,6 +243,7 @@ const staticProviders: NextAuthOptions["providers"] = [
         email: user.email,
         role: user.role,
         nip: user.nip,
+        bidang: user.bidang,
       };
     },
   }),
@@ -301,6 +306,7 @@ export const authOptions: NextAuthOptions = {
           (user as any).role = existingUser.role;
           (user as any).nip = existingUser.nip;
           (user as any).id = existingUser.id;
+          (user as any).bidang = existingUser.bidang;
 
           db.activityLog.create({
             data: {
@@ -324,6 +330,7 @@ export const authOptions: NextAuthOptions = {
         token.role = (user as any).role;
         token.nip = (user as any).nip;
         token.userId = user.id;
+        token.bidang = (user as any).bidang;
       }
       return token;
     },
@@ -332,6 +339,7 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).role = token.role;
         (session.user as any).nip = token.nip;
         (session.user as any).id = token.userId;
+        (session.user as any).bidang = token.bidang;
       }
       return session;
     },

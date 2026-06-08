@@ -131,12 +131,14 @@ export async function POST(request: NextRequest) {
         // Dynamically import to avoid issues
         const { appendFormResponse } = await import('@/lib/google-sheets')
 
-        // Build field data for sync
+        // Build field data for sync (including Drive links)
         const fieldData = fields.map((field: any) => {
           const formField = form.fields.find((f) => f.id === field.fieldId)
           return {
             label: formField?.label || '',
             value: field.value || '',
+            driveLink: field.driveLink || '',
+            fileName: field.fileName || '',
           }
         })
 

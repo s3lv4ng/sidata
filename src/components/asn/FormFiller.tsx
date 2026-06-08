@@ -163,11 +163,16 @@ export default function FormFiller() {
     )
   }
 
+  // Get user's bidang from session for Drive folder organization
+  const userBidang = (session?.user as any)?.bidang || ''
+
   const handleFileUpload = async (fieldId: string, file: File) => {
     setUploadingFields((prev) => new Set(prev).add(fieldId))
     try {
       const formData = new FormData()
       formData.append('file', file)
+      if (userBidang) formData.append('bidang', userBidang)
+      if (userId) formData.append('userId', userId)
 
       const res = await fetch('/api/upload', {
         method: 'POST',
@@ -228,6 +233,8 @@ export default function FormFiller() {
         const file = files[i]
         const formData = new FormData()
         formData.append('file', file)
+        if (userBidang) formData.append('bidang', userBidang)
+        if (userId) formData.append('userId', userId)
 
         const res = await fetch('/api/upload', {
           method: 'POST',

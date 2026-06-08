@@ -3,6 +3,16 @@ import { NextRequest, NextResponse } from 'next/server'
 // GET /api/drive - Check Drive configuration status and test connection
 export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url)
+    const action = searchParams.get('action')
+
+    // List bidang subfolders
+    if (action === 'list-bidang-folders') {
+      const { listBidangFolders } = await import('@/lib/google-drive')
+      const folders = await listBidangFolders()
+      return NextResponse.json({ folders })
+    }
+
     const { testDriveConnection } = await import('@/lib/google-drive')
     const result = await testDriveConnection()
 
@@ -16,7 +26,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/drive - Actions: create-shared-drive, test-upload
+// POST /api/drive - Actions: create-shared-drive, test-upload, create-bidang-folder
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -60,6 +70,29 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
           success: false,
           message: 'Upload ke Google Drive gagal. Folder mungkin berada di "My Drive" - gunakan Shared Drive atau atur Email Delegasi.',
+        }, { status: 400 })
+      }
+    }
+
+    if (action === 'create-bidang-folder') {
+      const { bidang } = body
+      if (!bidang) {
+        return NextResponse.json({ error: 'Nama bidang diperlukan' }, { status: 400 })
+      }
+
+      const { findOrCreateBidangFolder } = await import('@/lib/google-drive')
+      const folderId = await findOrCreateBidangFolder(bidang)
+
+      if (folderId) {
+        return NextResponse.json({
+          success: true,
+          message: `Folder untuk bidang "${bidang}" berhasil dibuat/ditemukan di Google Drive.`,
+          folderId,
+        })
+      } else {
+        return NextResponse.json({
+          success: false,
+          message: `Gagal membuat folder untuk bidang "${bidang}". Pastikan Google Drive sudah dikonfigurasi dan dapat diakses.`,
         }, { status: 400 })
       }
     }

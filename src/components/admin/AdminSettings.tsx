@@ -192,6 +192,7 @@ export default function AdminSettings() {
   } | null>(null)
   const [testingDrive, setTestingDrive] = useState(false)
   const [testingDriveUpload, setTestingDriveUpload] = useState(false)
+  const [bidangFolders, setBidangFolders] = useState<Array<{ id: string; name: string; webViewLink?: string }>>([])
   const [driveFilesDialogOpen, setDriveFilesDialogOpen] = useState(false)
   const [showDriveCredentials, setShowDriveCredentials] = useState(false)
   const [showGoogleClientSecret, setShowGoogleClientSecret] = useState(false)
@@ -1352,6 +1353,69 @@ export default function AdminSettings() {
                       <li>Masukkan email, private key, dan folder ID di bawah</li>
                     </ol>
                   </div>
+                </div>
+              )}
+
+              {/* Bidang Folders Section */}
+              {driveStatus && driveStatus.connected && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                      <FolderOpen className="w-3.5 h-3.5" />
+                      Folder Bidang di Google Drive
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-6 gap-1 text-[11px]"
+                      onClick={async () => {
+                        try {
+                          const res = await fetch('/api/drive?action=list-bidang-folders')
+                          const data = await res.json()
+                          if (data.folders) {
+                            setBidangFolders(data.folders)
+                            if (data.folders.length === 0) {
+                              addNotification('Belum ada folder bidang di Drive', 'info')
+                            } else {
+                              addNotification(`Ditemukan ${data.folders.length} folder bidang`, 'success')
+                            }
+                          }
+                        } catch {
+                          addNotification('Gagal mengambil daftar folder bidang', 'error')
+                        }
+                      }}
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      Muat Folder
+                    </Button>
+                  </div>
+                  {bidangFolders.length > 0 ? (
+                    <div className="space-y-1">
+                      {bidangFolders.map((folder) => (
+                        <div key={folder.id} className="flex items-center gap-2 rounded-md border p-2 text-xs">
+                          <FolderOpen className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                          <span className="font-medium flex-1">{folder.name}</span>
+                          {folder.webViewLink && (
+                            <a
+                              href={folder.webViewLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary hover:underline flex items-center gap-0.5 shrink-0"
+                            >
+                              Buka <ExternalLink className="w-2.5 h-2.5" />
+                            </a>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-muted-foreground/70 pl-1">
+                      Folder bidang akan dibuat otomatis saat ASN dengan bidang tersebut mengunggah file.
+                    </p>
+                  )}
+                  <p className="text-[10px] text-muted-foreground/60 pl-1">
+                    Setiap bidang (Aset, Keuangan, dll.) akan memiliki folder terpisah di Google Drive. Folder dibuat otomatis saat upload pertama kali.
+                  </p>
                 </div>
               )}
 

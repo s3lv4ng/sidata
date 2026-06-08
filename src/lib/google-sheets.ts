@@ -315,7 +315,7 @@ export async function syncFormResponses(formId: string): Promise<{
   // Build headers
   const headers = ['NIP', 'Nama', 'Bidang', 'Jabatan', 'Waktu Pengisian', ...form.fields.map((f) => f.label)]
 
-  // Build rows
+  // Build rows - include Drive links for file upload fields
   const rows = form.responses.map((resp) => {
     const row = [
       resp.user.nip,
@@ -326,7 +326,12 @@ export async function syncFormResponses(formId: string): Promise<{
     ]
     form.fields.forEach((field) => {
       const fieldResp = resp.fields.find((f) => f.fieldId === field.id)
-      row.push(fieldResp?.value || '')
+      // For file upload fields, prefer Drive link if available
+      if (fieldResp?.driveLink && (field.type === 'file_upload' || field.type === 'image_upload' || field.type === 'multi_upload')) {
+        row.push(fieldResp.driveLink)
+      } else {
+        row.push(fieldResp?.value || '')
+      }
     })
     return row
   })
@@ -389,7 +394,7 @@ export async function appendFormResponse(
     bidang: string
     jabatan: string
     submittedAt: Date
-    fields: Array<{ label: string; value: string }>
+    fields: Array<{ label: string; value: string; driveLink?: string; fileName?: string }>
   }
 ): Promise<boolean> {
   try {
@@ -405,7 +410,7 @@ export async function appendFormResponse(
     const sheets = createSheetsClient(config)
     const targetSheetName = form.title.replace(/[^a-zA-Z0-9\s]/g, '').substring(0, 50) || 'Responses'
 
-    // Build row data
+    // Build row data with Drive links for file fields
     const row = [
       responseData.nip,
       responseData.name,
@@ -414,7 +419,12 @@ export async function appendFormResponse(
       new Date(responseData.submittedAt).toLocaleString('id-ID'),
       ...form.fields.map((field) => {
         const match = responseData.fields.find((f) => f.label === field.label)
-        return match?.value || ''
+        if (!match) return ''
+        // For file upload fields, include Drive link if available
+        if (match.driveLink && (field.type === 'file_upload' || field.type === 'image_upload' || field.type === 'multi_upload')) {
+          return match.driveLink
+        }
+        return match.value || ''
       }),
     ]
 

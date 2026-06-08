@@ -206,6 +206,153 @@ export async function uploadToDrive(
   }
 }
 
+// In-memory cache for bidang folder IDs to avoid repeated lookups
+const bidangFolderCache: Record<string, { folderId: string; cachedAt: number }> = {}
+const BIDANG_CACHE_TTL = 30 * 60 * 1000 // 30 minutes
+
+// Find or create a subfolder for a specific Bidang in the parent Drive folder
+// Each bidang gets its own folder (e.g., "Aset", "Keuangan", etc.)
+export async function findOrCreateBidangFolder(bidangName: string): Promise<string | null> {
+  try {
+    const config = await getDriveConfig()
+    if (!config) {
+      console.log('Google Drive not configured, cannot create bidang folder')
+      return null
+    }
+
+    // Check cache first
+    const cached = bidangFolderCache[bidangName]
+    if (cached && Date.now() - cached.cachedAt < BIDANG_CACHE_TTL) {
+      return cached.folderId
+    }
+
+    const drive = createDriveClient(config)
+
+    // Sanitize bidang name for folder name
+    const sanitizedBidang = bidangName.trim().replace(/[<>:"/\\|?*]/g, '_')
+    if (!sanitizedBidang) return null
+
+    // Search for existing folder with this bidang name in the parent folder
+    const searchResponse = await drive.files.list({
+      q: `'${config.folderId}' in parents and name = '${sanitizedBidang}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+      fields: 'files(id, name)',
+      includeItemsFromAllDrives: true,
+      supportsAllDrives: true,
+      corpora: 'allDrives',
+      pageSize: 1,
+    })
+
+    if (searchResponse.data.files && searchResponse.data.files.length > 0) {
+      const existingFolderId = searchResponse.data.files[0].id!
+      // Cache the result
+      bidangFolderCache[bidangName] = { folderId: existingFolderId, cachedAt: Date.now() }
+      console.log(`Found existing Drive folder for bidang "${sanitizedBidang}": ${existingFolderId}`)
+      return existingFolderId
+    }
+
+    // Folder doesn't exist, create it
+    console.log(`Creating new Drive folder for bidang "${sanitizedBidang}"...`)
+    const createResponse = await drive.files.create({
+      requestBody: {
+        name: sanitizedBidang,
+        mimeType: 'application/vnd.google-apps.folder',
+        parents: [config.folderId],
+      },
+      fields: 'id, name, webViewLink',
+      supportsAllDrives: true,
+    })
+
+    const newFolderId = createResponse.data.id
+    if (!newFolderId) {
+      console.error('Failed to create bidang folder: no ID returned')
+      return null
+    }
+
+    console.log(`Created Drive folder for bidang "${sanitizedBidang}": ${newFolderId}`)
+
+    // Make the folder accessible (anyone with link can view)
+    try {
+      await drive.permissions.create({
+        fileId: newFolderId,
+        requestBody: {
+          role: 'reader',
+          type: 'anyone',
+        },
+        supportsAllDrives: true,
+      })
+    } catch (permError: any) {
+      console.warn('Could not set public permission on bidang folder:', permError?.message)
+    }
+
+    // Cache the result
+    bidangFolderCache[bidangName] = { folderId: newFolderId, cachedAt: Date.now() }
+
+    return newFolderId
+  } catch (error: any) {
+    console.error(`Error finding/creating bidang folder "${bidangName}":`, error?.message || error)
+    return null
+  }
+}
+
+// Upload a file to a bidang-specific folder in Google Drive
+// Automatically creates the bidang folder if it doesn't exist
+export async function uploadToBidangFolder(
+  fileBuffer: Buffer,
+  fileName: string,
+  mimeType: string,
+  bidangName: string
+): Promise<{ fileId: string; webViewLink: string; folderId: string } | null> {
+  try {
+    // Find or create the bidang folder
+    const bidangFolderId = await findOrCreateBidangFolder(bidangName)
+    
+    if (bidangFolderId) {
+      // Upload to the bidang-specific folder
+      const result = await uploadToDrive(fileBuffer, fileName, mimeType, bidangFolderId)
+      if (result) {
+        return { ...result, folderId: bidangFolderId }
+      }
+    }
+
+    // Fallback: upload to the main parent folder
+    console.log(`Falling back to main folder upload for "${fileName}"`)
+    const result = await uploadToDrive(fileBuffer, fileName, mimeType)
+    return result ? { ...result, folderId: '' } : null
+  } catch (error: any) {
+    console.error('Error uploading to bidang folder:', error?.message || error)
+    // Fallback to main folder
+    const result = await uploadToDrive(fileBuffer, fileName, mimeType)
+    return result ? { ...result, folderId: '' } : null
+  }
+}
+
+// List all bidang subfolders in the parent Drive folder
+export async function listBidangFolders(): Promise<Array<{ id: string; name: string; webViewLink?: string }>> {
+  try {
+    const config = await getDriveConfig()
+    if (!config) return []
+
+    const drive = createDriveClient(config)
+    const response = await drive.files.list({
+      q: `'${config.folderId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+      fields: 'files(id, name, webViewLink)',
+      includeItemsFromAllDrives: true,
+      supportsAllDrives: true,
+      corpora: 'allDrives',
+      pageSize: 100,
+    })
+
+    return (response.data.files || []).map((f) => ({
+      id: f.id || '',
+      name: f.name || '',
+      webViewLink: f.webViewLink || undefined,
+    }))
+  } catch (error: any) {
+    console.error('Error listing bidang folders:', error?.message || error)
+    return []
+  }
+}
+
 // Delete a file from Google Drive
 export async function deleteFromDrive(fileId: string): Promise<boolean> {
   try {
