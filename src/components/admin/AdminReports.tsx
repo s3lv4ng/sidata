@@ -27,6 +27,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { PaginationBar } from '@/components/shared/PaginationBar'
 import {
   BarChart3,
   Download,
@@ -115,6 +116,7 @@ interface ReportData {
 }
 
 const BIDANG_OPTIONS = ['Pendapatan', 'Belanja', 'Aset', 'Umum']
+const ITEMS_PER_PAGE = 10
 
 function formatDateTime(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('id-ID', {
@@ -162,6 +164,9 @@ export default function AdminReports() {
 
   // Search in table
   const [searchQuery, setSearchQuery] = useState('')
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1)
 
   // Detail dialog
   const [detailDialogOpen, setDetailDialogOpen] = useState(false)
@@ -214,6 +219,7 @@ export default function AdminReports() {
       if (res.ok) {
         const data = await res.json()
         setReportData(data)
+        setCurrentPage(1)
       } else {
         const errData = await res.json()
         addNotification(errData.error || 'Gagal memuat laporan', 'error')
@@ -226,6 +232,11 @@ export default function AdminReports() {
     }
   }
 
+  // Reset page when search query changes
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery])
+
   // Filtered responses for table search
   const filteredResponses = (reportData?.responses || []).filter((r) => {
     if (!searchQuery) return true
@@ -236,6 +247,13 @@ export default function AdminReports() {
       (r.user.bidang || '').toLowerCase().includes(q)
     )
   })
+
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(filteredResponses.length / ITEMS_PER_PAGE))
+  const paginatedResponses = filteredResponses.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  )
 
   // Statistics
   const totalResponded = reportData?.totalResponded || 0
@@ -787,7 +805,7 @@ export default function AdminReports() {
               </CardContent>
             </Card>
           ) : (
-            <Card className="border-border/60 overflow-hidden">
+            <Card className="border-border/60 overflow-hidden flex flex-col">
               <CardHeader className="p-4 pb-2">
                 <CardTitle className="text-sm font-semibold flex items-center gap-2">
                   <FileText className="w-4 h-4 text-blue-600" />
@@ -797,8 +815,7 @@ export default function AdminReports() {
                   </Badge>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-0">
-                <ScrollArea className="max-h-[calc(100vh-560px)]">
+              <CardContent className="p-0 flex-1 overflow-auto">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-muted/30">
@@ -822,14 +839,14 @@ export default function AdminReports() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredResponses.map((r, index) => (
+                      {paginatedResponses.map((r, index) => (
                         <TableRow
                           key={r.id}
                           className="group cursor-pointer"
                           onClick={() => handleViewDetail(r)}
                         >
                           <TableCell className="text-center text-muted-foreground text-sm">
-                            {index + 1}
+                            {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
                           </TableCell>
                           <TableCell>
                             <p className="font-medium text-sm text-foreground">{r.user.name}</p>
@@ -901,8 +918,15 @@ export default function AdminReports() {
                       ))}
                     </TableBody>
                   </Table>
-                </ScrollArea>
               </CardContent>
+              <PaginationBar
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                totalItems={filteredResponses.length}
+                itemsPerPage={ITEMS_PER_PAGE}
+                itemName="respons"
+              />
             </Card>
           )}
 

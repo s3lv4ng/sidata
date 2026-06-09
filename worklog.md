@@ -548,3 +548,147 @@ Stage Summary:
 - Bidang info flows through: session → FormFiller → upload API → Drive folder
 - All lint passes (only pre-existing custom-server.js warnings)
 - Verified with API testing: bidang folder creation, file upload with bidang, list folders
+
+---
+Task ID: 4
+Agent: subagent
+Task: Add pagination to AdminAnnouncements
+
+Work Log:
+- Read AdminAnnouncements.tsx to understand current ScrollArea-based layout
+- Read PaginationBar.tsx to understand the shared component's props interface
+- Referenced AdminASN.tsx to match the established pagination pattern
+- Added pagination state (currentPage, ITEMS_PER_PAGE=6) and import for PaginationBar
+- Added useEffect to reset currentPage to 1 when searchQuery changes
+- Wrapped filteredAnnouncements in useMemo for optimization
+- Computed totalPages and paginatedAnnouncements by slicing filteredAnnouncements
+- Replaced ScrollArea wrapper with Card using flex flex-col pattern
+- Rendered paginatedAnnouncements instead of all filteredAnnouncements
+- Added PaginationBar component at the bottom of the Card with itemName="pengumuman"
+- Removed ScrollArea import, replaced with PaginationBar import
+- Added useMemo import from React
+- Fixed JSX closing syntax error (missing `}` in ternary)
+- Verified lint passes (only pre-existing custom-server.js errors remain)
+
+Stage Summary:
+- AdminAnnouncements now has full pagination support with 6 items per page
+- Page resets to 1 when search query changes
+- Card-based layout preserved (not converted to table)
+- Follows the same flex-col + PaginationBar pattern as AdminASN and other admin components
+- PaginationBar auto-hides when totalPages <= 1
+
+---
+Task ID: 5
+Agent: subagent
+Task: Add pagination to AdminForms
+
+Work Log:
+- Read AdminForms.tsx, PaginationBar.tsx, and referenced AdminASN.tsx for pagination pattern
+- Added PaginationBar import (replaced ScrollArea import which is no longer needed)
+- Added pagination state: `currentPage` (useState) and `ITEMS_PER_PAGE = 8`
+- Added useEffect to reset currentPage to 1 when searchQuery or statusFilter changes
+- Computed `totalPages` and `paginatedForms` from `sortedForms` using slice
+- Updated desktop table view: replaced ScrollArea with overflow-auto div, Card changed to `flex flex-col`, added PaginationBar at bottom
+- Updated row number from `{index + 1}` to `{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}`
+- Used `paginatedForms` instead of `sortedForms` for table rows and mobile cards
+- Added PaginationBar below mobile card list with same props
+- Fixed JSX parsing error (corrupted `</>` closing fragment)
+- Verified lint passes (only pre-existing custom-server.js warnings)
+
+Stage Summary:
+- AdminForms now has full pagination support with 8 items per page
+- Page resets to 1 when search query or status filter changes
+- Both desktop table and mobile card views use paginated data
+- PaginationBar with itemName="form" shown below both views
+- PaginationBar auto-hides when totalPages <= 1
+- Consistent pattern with AdminASN, AdminResponses, AdminUsers, AdminActivityLogs
+
+---
+Task ID: 6
+Agent: subagent
+Task: Add pagination to AdminMasterData
+
+Work Log:
+- Read AdminMasterData.tsx to understand current ScrollArea-based layout (two tabs: Bidang and Status ASN)
+- Read PaginationBar.tsx to understand the shared component's props interface
+- Added PaginationBar import from '@/components/shared/PaginationBar'
+- Removed ScrollArea import (no longer needed)
+- Added pagination state: bidangPage, statusPage (useState), ITEMS_PER_PAGE = 9
+- Added useEffect to reset bidangPage to 1 when bidangSearch changes
+- Added useEffect to reset statusPage to 1 when statusSearch changes
+- Computed bidangTotalPages and paginatedBidang from filteredBidang using slice
+- Computed statusTotalPages and paginatedStatus from filteredStatus using slice
+- Updated Bidang tab: replaced ScrollArea with Card (flex flex-col), used paginatedBidang instead of filteredBidang, added PaginationBar at bottom with itemName="bidang"
+- Updated Status ASN tab: same pattern, used paginatedStatus, added PaginationBar with itemName="status"
+- Preserved 3-column grid layout (grid-cols-1 sm:grid-cols-2 lg:grid-cols-3)
+- All existing functionality preserved (create, edit, delete, search)
+- Verified lint passes (only pre-existing custom-server.js warnings)
+
+Stage Summary:
+- AdminMasterData now has full pagination support for both tabs (Bidang and Status ASN)
+- 9 items per page (3 rows × 3 columns in the grid layout)
+- Page resets to 1 when search query changes
+- ScrollArea removed, replaced with Card + PaginationBar pattern
+- PaginationBar auto-hides when totalPages <= 1
+- Consistent pattern with other admin components (AdminASN, AdminResponses, etc.)
+
+---
+Task ID: 7
+Agent: subagent
+Task: Add pagination to AdminReports
+
+Work Log:
+- Read AdminReports.tsx to understand current ScrollArea-based layout (response data table inside Card with ScrollArea max-h-[calc(100vh-560px)])
+- Read PaginationBar.tsx to understand the shared component's props interface
+- Referenced AdminASN.tsx to match the established pagination pattern
+- Added PaginationBar import from '@/components/shared/PaginationBar'
+- Added ITEMS_PER_PAGE = 10 constant after BIDANG_OPTIONS
+- Added currentPage state: `const [currentPage, setCurrentPage] = useState(1)`
+- Added useEffect to reset currentPage to 1 when searchQuery changes
+- Computed totalPages and paginatedResponses by slicing filteredResponses
+- Added `setCurrentPage(1)` inside handleFetchReport after setting report data
+- Updated Response Table Card:
+  - Changed Card class to `flex flex-col` pattern
+  - Replaced ScrollArea with `flex-1 overflow-auto` div on CardContent
+  - Used paginatedResponses instead of filteredResponses for table rows
+  - Updated row numbers from `{index + 1}` to `{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}`
+  - Added PaginationBar at the bottom of the Card with itemName="respons"
+- Kept ScrollArea import (still used in Unresponded ASN List section)
+- Verified lint passes (only pre-existing custom-server.js warnings)
+
+Stage Summary:
+- AdminReports now has full pagination support with 10 items per page
+- Page resets to 1 when search query changes or when new report data is fetched
+- ScrollArea replaced with overflow-auto on the response table Card
+- PaginationBar with itemName="respons" shown at bottom of table Card
+- PaginationBar auto-hides when totalPages <= 1
+- All existing functionality preserved (export Excel, export PDF, print, view detail, search, filters)
+- Consistent pattern with other admin components (AdminASN, AdminResponses, AdminForms, etc.)
+
+---
+Task ID: pagination-fix
+Agent: main
+Task: Fix all pagination and add pagination to components that don't have it
+
+Work Log:
+- Analyzed all 8 admin components for pagination status
+- Found 4 components already had PaginationBar: AdminASN, AdminActivityLogs, AdminResponses, AdminUsers
+- Found 4 components missing pagination: AdminAnnouncements, AdminForms, AdminMasterData, AdminReports
+- Added pagination to AdminAnnouncements (6 items/page, card layout preserved)
+- Added pagination to AdminForms (8 items/page, both desktop table & mobile card views)
+- Added pagination to AdminMasterData (9 items/page for both Bidang and Status ASN tabs, 3-col grid preserved)
+- Added pagination to AdminReports (10 items/page for response table)
+- Fixed critical bug: PaginationBar <a> tags were causing page navigation instead of React state changes
+  - Added `href="#"` and `e.preventDefault()` to all PaginationLink, PaginationPrevious, PaginationNext onClick handlers
+  - Without this fix, clicking pagination links would follow the <a> tag default behavior instead of updating React state
+- Verified with agent-browser: all admin pages render correctly, pagination works on pages with enough data
+- Tested page navigation: clicking page 2 correctly shows rows 11-12 and "Menampilkan 11–12 dari 12 data" on AdminUsers
+- Lint passes (only pre-existing custom-server.js warnings)
+
+Stage Summary:
+- All 8 admin components now have consistent pagination via shared PaginationBar component
+- Pagination items per page: AdminASN=10, AdminActivityLogs=10(server-side), AdminResponses=10, AdminUsers=10, AdminAnnouncements=6, AdminForms=8, AdminMasterData=9, AdminReports=10
+- Critical pagination click bug fixed (e.preventDefault() on <a> tags)
+- Pagination auto-hides when totalPages <= 1
+- Search/filter changes reset pagination to page 1
+- All pages verified working via agent-browser

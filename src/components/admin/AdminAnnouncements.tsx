@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import { useAppStore } from '@/stores/app-store'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { ScrollArea } from '@/components/ui/scroll-area'
+import { PaginationBar } from '@/components/shared/PaginationBar'
 import {
   Alert,
   AlertDescription,
@@ -87,6 +87,10 @@ export default function AdminAnnouncements() {
   // Search
   const [searchQuery, setSearchQuery] = useState('')
 
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1)
+  const ITEMS_PER_PAGE = 6
+
   // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false)
   const [dialogMode, setDialogMode] = useState<'create' | 'edit'>('create')
@@ -123,10 +127,22 @@ export default function AdminAnnouncements() {
     fetchAnnouncements()
   }, [fetchAnnouncements])
 
-  const filteredAnnouncements = announcements.filter((a) => {
+  const filteredAnnouncements = useMemo(() => announcements.filter((a) => {
     if (!searchQuery) return true
     return a.title.toLowerCase().includes(searchQuery.toLowerCase())
-  })
+  }), [announcements, searchQuery])
+
+  // Reset page when search changes
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery])
+
+  // Pagination computations
+  const totalPages = Math.max(1, Math.ceil(filteredAnnouncements.length / ITEMS_PER_PAGE))
+  const paginatedAnnouncements = filteredAnnouncements.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  )
 
   const handleOpenCreate = () => {
     setDialogMode('create')
@@ -384,9 +400,9 @@ export default function AdminAnnouncements() {
           </CardContent>
         </Card>
       ) : (
-        <ScrollArea className="max-h-[calc(100vh-260px)]">
-          <div className="space-y-3">
-            {filteredAnnouncements.map((announcement) => (
+        <Card className="border-border/60 flex flex-col">
+          <div className="flex-1 space-y-3 p-4">
+            {paginatedAnnouncements.map((announcement) => (
               <Card
                 key={announcement.id}
                 className={`border-border/60 transition-colors hover:border-border ${
@@ -518,7 +534,17 @@ export default function AdminAnnouncements() {
               </Card>
             ))}
           </div>
-        </ScrollArea>
+
+          {/* Pagination */}
+          <PaginationBar
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            totalItems={filteredAnnouncements.length}
+            itemsPerPage={ITEMS_PER_PAGE}
+            itemName="pengumuman"
+          />
+        </Card>
       )}
 
       {/* Create/Edit Dialog */}

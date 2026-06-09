@@ -78,7 +78,8 @@ export function PaginationBar({
           <PaginationContent>
             <PaginationItem>
               <PaginationPrevious
-                onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+                href="#"
+                onClick={(e) => { e.preventDefault(); onPageChange(Math.max(1, currentPage - 1)) }}
                 className={
                   currentPage === 1
                     ? 'pointer-events-none opacity-50'
@@ -98,7 +99,8 @@ export function PaginationBar({
                 <PaginationItem key={page}>
                   <PaginationLink
                     isActive={page === currentPage}
-                    onClick={() => onPageChange(page)}
+                    href="#"
+                    onClick={(e) => { e.preventDefault(); onPageChange(page) }}
                     className="cursor-pointer"
                   >
                     {page}
@@ -108,7 +110,8 @@ export function PaginationBar({
             })}
             <PaginationItem>
               <PaginationNext
-                onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+                href="#"
+                onClick={(e) => { e.preventDefault(); onPageChange(Math.min(totalPages, currentPage + 1)) }}
                 className={
                   currentPage === totalPages
                     ? 'pointer-events-none opacity-50'

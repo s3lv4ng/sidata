@@ -24,7 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { ScrollArea } from '@/components/ui/scroll-area'
+import { PaginationBar } from '@/components/shared/PaginationBar'
 import {
   Tooltip,
   TooltipContent,
@@ -120,6 +120,15 @@ export default function AdminForms() {
 
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null)
 
+  // Pagination state
+  const ITEMS_PER_PAGE = 8
+  const [currentPage, setCurrentPage] = useState(1)
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, statusFilter])
+
   const userId = (session?.user as any)?.id || ''
 
   const fetchForms = useCallback(async () => {
@@ -175,6 +184,13 @@ export default function AdminForms() {
         return 0
     }
   })
+
+  // Pagination computations
+  const totalPages = Math.max(1, Math.ceil(sortedForms.length / ITEMS_PER_PAGE))
+  const paginatedForms = sortedForms.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  )
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -362,8 +378,8 @@ export default function AdminForms() {
         ) : (
           <>
             {/* Desktop table view */}
-            <Card className="border-border/60 overflow-hidden hidden md:block">
-              <ScrollArea className="max-h-[calc(100vh-320px)]">
+            <Card className="border-border/60 overflow-hidden hidden md:flex md:flex-col">
+              <div className="overflow-auto">
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/30">
@@ -392,7 +408,7 @@ export default function AdminForms() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {sortedForms.map((form, index) => {
+                    {paginatedForms.map((form, index) => {
                       const status = getStatusInfo(form)
                       const deadlineInfo = getDeadlineInfo(form.deadline)
                       const responseCount = form.responses?.length || 0
@@ -400,7 +416,7 @@ export default function AdminForms() {
                       return (
                         <TableRow key={form.id} className="group hover:bg-muted/50 transition-colors">
                           <TableCell className="text-center text-muted-foreground text-sm">
-                            {index + 1}
+                            {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
                           </TableCell>
                           <TableCell>
                             <div className="min-w-0">
@@ -568,12 +584,20 @@ export default function AdminForms() {
                     })}
                   </TableBody>
                 </Table>
-              </ScrollArea>
+              </div>
+              <PaginationBar
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                totalItems={sortedForms.length}
+                itemsPerPage={ITEMS_PER_PAGE}
+                itemName="form"
+              />
             </Card>
 
             {/* Mobile card view */}
             <div className="md:hidden space-y-3">
-              {sortedForms.map((form) => {
+              {paginatedForms.map((form) => {
                 const status = getStatusInfo(form)
                 const deadlineInfo = getDeadlineInfo(form.deadline)
                 const responseCount = form.responses?.length || 0
@@ -710,6 +734,14 @@ export default function AdminForms() {
                   </Card>
                 )
               })}
+              <PaginationBar
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                totalItems={sortedForms.length}
+                itemsPerPage={ITEMS_PER_PAGE}
+                itemName="form"
+              />
             </div>
           </>
         )}

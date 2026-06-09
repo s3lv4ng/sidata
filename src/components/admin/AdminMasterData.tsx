@@ -1,13 +1,13 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { PaginationBar } from '@/components/shared/PaginationBar'
 import { useAppStore } from '@/stores/app-store'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Dialog,
@@ -48,6 +48,11 @@ export default function AdminMasterData() {
   const [statusList, setStatusList] = useState<MasterDataItem[]>([])
   const [statusLoading, setStatusLoading] = useState(true)
   const [statusSearch, setStatusSearch] = useState('')
+
+  // Pagination state
+  const [bidangPage, setBidangPage] = useState(1)
+  const [statusPage, setStatusPage] = useState(1)
+  const ITEMS_PER_PAGE = 9
 
   // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -100,6 +105,15 @@ export default function AdminMasterData() {
     fetchStatus()
   }, [fetchBidang, fetchStatus])
 
+  // Reset page when search changes
+  useEffect(() => {
+    setBidangPage(1)
+  }, [bidangSearch])
+
+  useEffect(() => {
+    setStatusPage(1)
+  }, [statusSearch])
+
   // Filtered lists
   const filteredBidang = bidangList.filter((b) => {
     if (!bidangSearch) return true
@@ -110,6 +124,13 @@ export default function AdminMasterData() {
     if (!statusSearch) return true
     return s.name.toLowerCase().includes(statusSearch.toLowerCase())
   })
+
+  // Pagination computations
+  const bidangTotalPages = Math.max(1, Math.ceil(filteredBidang.length / ITEMS_PER_PAGE))
+  const paginatedBidang = filteredBidang.slice((bidangPage - 1) * ITEMS_PER_PAGE, bidangPage * ITEMS_PER_PAGE)
+
+  const statusTotalPages = Math.max(1, Math.ceil(filteredStatus.length / ITEMS_PER_PAGE))
+  const paginatedStatus = filteredStatus.slice((statusPage - 1) * ITEMS_PER_PAGE, statusPage * ITEMS_PER_PAGE)
 
   // Open create dialog
   const handleOpenCreate = (type: 'bidang' | 'status') => {
@@ -297,9 +318,9 @@ export default function AdminMasterData() {
               </CardContent>
             </Card>
           ) : (
-            <ScrollArea className="max-h-[calc(100vh-320px)]">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {filteredBidang.map((item) => (
+            <Card className="border-border/60 flex flex-col">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-4">
+                {paginatedBidang.map((item) => (
                   <Card
                     key={item.id}
                     className="border-border/60 transition-colors hover:border-border group"
@@ -348,7 +369,15 @@ export default function AdminMasterData() {
                   </Card>
                 ))}
               </div>
-            </ScrollArea>
+              <PaginationBar
+                currentPage={bidangPage}
+                totalPages={bidangTotalPages}
+                onPageChange={setBidangPage}
+                totalItems={filteredBidang.length}
+                itemsPerPage={ITEMS_PER_PAGE}
+                itemName="bidang"
+              />
+            </Card>
           )}
         </TabsContent>
 
@@ -401,9 +430,9 @@ export default function AdminMasterData() {
               </CardContent>
             </Card>
           ) : (
-            <ScrollArea className="max-h-[calc(100vh-320px)]">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {filteredStatus.map((item) => (
+            <Card className="border-border/60 flex flex-col">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-4">
+                {paginatedStatus.map((item) => (
                   <Card
                     key={item.id}
                     className="border-border/60 transition-colors hover:border-border group"
@@ -452,7 +481,15 @@ export default function AdminMasterData() {
                   </Card>
                 ))}
               </div>
-            </ScrollArea>
+              <PaginationBar
+                currentPage={statusPage}
+                totalPages={statusTotalPages}
+                onPageChange={setStatusPage}
+                totalItems={filteredStatus.length}
+                itemsPerPage={ITEMS_PER_PAGE}
+                itemName="status"
+              />
+            </Card>
           )}
         </TabsContent>
       </Tabs>
