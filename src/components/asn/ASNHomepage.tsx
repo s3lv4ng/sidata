@@ -162,7 +162,7 @@ function getDeadlineCountdown(deadline: string): { text: string; urgent: boolean
 export default function ASNHomepage() {
   const { data: session } = useSession()
   const { setCurrentView, setSelectedForm } = useAppStore()
-  const { logo, appShortName, instansiName, daerah, instansiEmail, instansiPhone, instansiAddress } = useAppBranding()
+  const { logo, appName, appShortName, instansiName, daerah, instansiEmail, instansiPhone, instansiAddress } = useAppBranding()
   useDynamicFavicon()
 
   const [announcements, setAnnouncements] = useState<Announcement[]>([])

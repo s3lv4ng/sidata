@@ -908,3 +908,31 @@ Stage Summary:
 - AdminUsers edit dialog Bidang dropdown now fetches from Data Master API ✅
 - AdminUsers edit dialog Status ASN dropdown now fetches from Data Master API ✅
 - Lint passes (only pre-existing custom-server.js warnings) ✅
+
+---
+Task ID: 15
+Agent: main
+Task: Fix footer not following system settings on ASN role + Fix Edit User bidang field not fetching from Data Master
+
+Work Log:
+- Fixed `appName is not defined` ReferenceError in ASNHomepage.tsx line 907
+  - Root cause: `useAppBranding()` hook returns `appName` but the component didn't destructure it (line 165)
+  - Fix: Added `appName` to the destructuring: `const { logo, appName, appShortName, instansiName, daerah, instansiEmail, instansiPhone, instansiAddress } = useAppBranding()`
+  - This also fixes the footer not following system settings since `appName` is used in the footer
+- Improved AdminUsers.tsx bidang/statusASN dropdown reliability
+  - Added `Array.isArray()` check when parsing API responses to prevent crash on error objects
+  - Added fallback to defaults when API returns non-ok response (not just on catch)
+  - Added current value preservation: if user's current bidang/statusASN isn't in master data options, it's still shown in the dropdown
+  - Same pattern applied to both bidang and statusASN Select components
+- Verified with agent-browser:
+  - ASN homepage loads without errors (no more ReferenceError)
+  - Footer shows correct system settings: "Badan Keuangan dan Aset Daerah", address "Jl. Ahmad Yani No.01", phone "0851-7979-7660", email "bkad@seruyankab.go.id"
+  - Admin Edit User dialog shows bidang dropdown with Data Master options (Pendapatan, Aklap&SIPD, Anggaran, Aset, Perbend, Sekretariat)
+  - Admin Edit User dialog shows statusASN dropdown with Data Master options (PNS, PPPK)
+
+Stage Summary:
+- `appName is not defined` crash FIXED ✅ — footer now correctly shows system settings for ASN role
+- Bidang dropdown in Edit User now reliably fetches from Data Master ✅
+- StatusASN dropdown in Edit User now reliably fetches from Data Master ✅
+- Both dropdowns preserve current value even if not in master data (edge case handling)
+- No runtime errors on ASN homepage or Admin User Management page

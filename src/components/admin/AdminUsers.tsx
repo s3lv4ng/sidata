@@ -157,11 +157,25 @@ export default function AdminUsers() {
         ])
         if (bidangRes.ok) {
           const bidangData = await bidangRes.json()
-          setBidangOptions(bidangData.map((b: any) => b.name))
+          if (Array.isArray(bidangData)) {
+            const names = bidangData.map((b: any) => b.name).filter(Boolean)
+            setBidangOptions(names.length > 0 ? names : ['Pendapatan', 'Belanja', 'Aset', 'Umum'])
+          } else {
+            setBidangOptions(['Pendapatan', 'Belanja', 'Aset', 'Umum'])
+          }
+        } else {
+          setBidangOptions(['Pendapatan', 'Belanja', 'Aset', 'Umum'])
         }
         if (statusRes.ok) {
           const statusData = await statusRes.json()
-          setStatusASNOptions(statusData.map((s: any) => s.name))
+          if (Array.isArray(statusData)) {
+            const names = statusData.map((s: any) => s.name).filter(Boolean)
+            setStatusASNOptions(names.length > 0 ? names : ['PNS', 'PPPK'])
+          } else {
+            setStatusASNOptions(['PNS', 'PPPK'])
+          }
+        } else {
+          setStatusASNOptions(['PNS', 'PPPK'])
         }
       } catch {
         // Fallback to defaults
@@ -801,10 +815,14 @@ export default function AdminUsers() {
                     <SelectValue placeholder="Pilih bidang" />
                   </SelectTrigger>
                   <SelectContent>
+                    {/* Show current bidang if it exists but isn't in master data */}
+                    {formBidang && !bidangOptions.includes(formBidang) && (
+                      <SelectItem key={formBidang} value={formBidang}>{formBidang}</SelectItem>
+                    )}
                     {bidangOptions.map((bidang) => (
                       <SelectItem key={bidang} value={bidang}>{bidang}</SelectItem>
                     ))}
-                    {bidangOptions.length === 0 && (
+                    {bidangOptions.length === 0 && !formBidang && (
                       <SelectItem value="_empty" disabled>Tidak ada data bidang</SelectItem>
                     )}
                   </SelectContent>
@@ -820,10 +838,14 @@ export default function AdminUsers() {
                     <SelectValue placeholder="Pilih status" />
                   </SelectTrigger>
                   <SelectContent>
+                    {/* Show current status if it exists but isn't in master data */}
+                    {formStatusASN && !statusASNOptions.includes(formStatusASN) && (
+                      <SelectItem key={formStatusASN} value={formStatusASN}>{formStatusASN}</SelectItem>
+                    )}
                     {statusASNOptions.map((status) => (
                       <SelectItem key={status} value={status}>{status}</SelectItem>
                     ))}
-                    {statusASNOptions.length === 0 && (
+                    {statusASNOptions.length === 0 && !formStatusASN && (
                       <SelectItem value="_empty" disabled>Tidak ada data status</SelectItem>
                     )}
                   </SelectContent>
