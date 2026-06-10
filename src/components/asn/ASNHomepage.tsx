@@ -162,7 +162,7 @@ function getDeadlineCountdown(deadline: string): { text: string; urgent: boolean
 export default function ASNHomepage() {
   const { data: session } = useSession()
   const { setCurrentView, setSelectedForm } = useAppStore()
-  const { logo } = useAppBranding()
+  const { logo, appShortName, instansiName, daerah, instansiEmail, instansiPhone, instansiAddress } = useAppBranding()
   useDynamicFavicon()
 
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
@@ -490,8 +490,8 @@ export default function ASNHomepage() {
               />
             </div>
             <div className="hidden sm:block">
-              <h1 className="text-sm font-bold text-primary leading-tight">SIDATA</h1>
-              <p className="text-xs text-muted-foreground">BKAD Kab. Seruyan</p>
+              <h1 className="text-sm font-bold text-primary leading-tight">{appShortName || 'SIDATA'}</h1>
+              <p className="text-xs text-muted-foreground">{instansiName || 'Instansi'}</p>
             </div>
           </div>
 
@@ -859,45 +859,52 @@ export default function ASNHomepage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             {/* Institution Info */}
             <div className="space-y-2">
-              <h4 className="text-sm font-bold text-foreground">BKAD Kabupaten Seruyan</h4>
+              <h4 className="text-sm font-bold text-foreground">{appShortName || 'SIDATA'}</h4>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Badan Keuangan dan Aset Daerah Kabupaten Seruyan, Provinsi Kalimantan Tengah
+                {instansiName}{daerah ? `, ${daerah}` : ''}
               </p>
             </div>
             {/* Address */}
             <div className="space-y-2">
               <h4 className="text-sm font-bold text-foreground">Alamat</h4>
-              <div className="flex items-start gap-2 text-xs text-muted-foreground">
-                <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0 text-primary/60" />
-                <span>Jl. Patin No. 1, Kuala Pembuang, Kab. Seruyan, Kalimantan Tengah 74211</span>
-              </div>
+              {instansiAddress ? (
+                <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                  <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0 text-primary/60" />
+                  <span>{instansiAddress}</span>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground/50 italic">Belum diatur</p>
+              )}
             </div>
             {/* Contact */}
             <div className="space-y-2">
               <h4 className="text-sm font-bold text-foreground">Kontak</h4>
               <div className="space-y-1.5">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Phone className="w-3.5 h-3.5 shrink-0 text-primary/60" />
-                  <span>(0532) 621001</span>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Mail className="w-3.5 h-3.5 shrink-0 text-primary/60" />
-                  <span>bkad@seruyankab.go.id</span>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Globe className="w-3.5 h-3.5 shrink-0 text-primary/60" />
-                  <span>www.seruyankab.go.id</span>
-                </div>
+                {instansiPhone ? (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Phone className="w-3.5 h-3.5 shrink-0 text-primary/60" />
+                    <span>{instansiPhone}</span>
+                  </div>
+                ) : null}
+                {instansiEmail ? (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Mail className="w-3.5 h-3.5 shrink-0 text-primary/60" />
+                    <span>{instansiEmail}</span>
+                  </div>
+                ) : null}
+                {!instansiPhone && !instansiEmail && (
+                  <p className="text-xs text-muted-foreground/50 italic">Belum diatur</p>
+                )}
               </div>
             </div>
           </div>
           <Separator className="my-4 bg-primary/10" />
           <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
             <p className="text-xs text-muted-foreground">
-              &copy; {new Date().getFullYear()} BKAD Kabupaten Seruyan &middot; Badan Keuangan dan Aset Daerah
+              &copy; {new Date().getFullYear()} {appShortName || 'SIDATA'} &middot; {instansiName || 'Instansi'}
             </p>
             <p className="text-xs text-muted-foreground/60">
-              Sistem Informasi Data ASN (SIDATA) v1.0.0
+              {appName || 'Sistem Informasi Data ASN'}
             </p>
           </div>
         </div>

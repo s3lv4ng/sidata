@@ -109,7 +109,7 @@ function formatTimeAgo(dateStr: string): string {
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession()
   const { currentView, setCurrentView, sidebarOpen, setSidebarOpen } = useAppStore()
-  const { logo } = useAppBranding()
+  const { logo, appShortName, appName, instansiName } = useAppBranding()
   useDynamicFavicon()
 
   const userName = session?.user?.name || 'Administrator'
@@ -446,7 +446,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* Footer */}
         <footer className="shrink-0 border-t bg-background/50 backdrop-blur-sm px-4 sm:px-6 py-3">
           <p className="text-[11px] text-muted-foreground text-center">
-            &copy; 2025 BKAD Kabupaten Seruyan &middot; Sistem Pengumpulan Data ASN
+            &copy; {new Date().getFullYear()} {appShortName || 'SIDATA'} &middot; {instansiName || 'Instansi'} &middot; {appName || 'Sistem Pengumpulan Data ASN'}
           </p>
         </footer>
       </div>

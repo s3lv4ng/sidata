@@ -115,6 +115,10 @@ export default function AdminUsers() {
   // Pagination
   const [currentPage, setCurrentPage] = useState(1)
 
+  // Dynamic master data options
+  const [bidangOptions, setBidangOptions] = useState<string[]>([])
+  const [statusASNOptions, setStatusASNOptions] = useState<string[]>([])
+
   const fetchUsers = useCallback(async () => {
     try {
       setLoading(true)
@@ -142,6 +146,31 @@ export default function AdminUsers() {
   useEffect(() => {
     fetchUsers()
   }, [fetchUsers])
+
+  // Fetch Bidang and Status ASN options from Data Master
+  useEffect(() => {
+    const fetchMasterData = async () => {
+      try {
+        const [bidangRes, statusRes] = await Promise.all([
+          fetch('/api/bidang'),
+          fetch('/api/status-asn'),
+        ])
+        if (bidangRes.ok) {
+          const bidangData = await bidangRes.json()
+          setBidangOptions(bidangData.map((b: any) => b.name))
+        }
+        if (statusRes.ok) {
+          const statusData = await statusRes.json()
+          setStatusASNOptions(statusData.map((s: any) => s.name))
+        }
+      } catch {
+        // Fallback to defaults
+        setBidangOptions(['Pendapatan', 'Belanja', 'Aset', 'Umum'])
+        setStatusASNOptions(['PNS', 'PPPK'])
+      }
+    }
+    fetchMasterData()
+  }, [])
 
   // Filter users
   const filteredUsers = users.filter((u) => {
@@ -772,10 +801,12 @@ export default function AdminUsers() {
                     <SelectValue placeholder="Pilih bidang" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Pendapatan">Pendapatan</SelectItem>
-                    <SelectItem value="Belanja">Belanja</SelectItem>
-                    <SelectItem value="Aset">Aset</SelectItem>
-                    <SelectItem value="Umum">Umum</SelectItem>
+                    {bidangOptions.map((bidang) => (
+                      <SelectItem key={bidang} value={bidang}>{bidang}</SelectItem>
+                    ))}
+                    {bidangOptions.length === 0 && (
+                      <SelectItem value="_empty" disabled>Tidak ada data bidang</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -789,8 +820,12 @@ export default function AdminUsers() {
                     <SelectValue placeholder="Pilih status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="PNS">PNS</SelectItem>
-                    <SelectItem value="PPPK">PPPK</SelectItem>
+                    {statusASNOptions.map((status) => (
+                      <SelectItem key={status} value={status}>{status}</SelectItem>
+                    ))}
+                    {statusASNOptions.length === 0 && (
+                      <SelectItem value="_empty" disabled>Tidak ada data status</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>

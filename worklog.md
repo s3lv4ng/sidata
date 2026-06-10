@@ -869,3 +869,42 @@ Stage Summary:
 - 8 admin components + DashboardOverview fixed ✅
 - All content properly contained within card boundaries ✅
 - No new lint errors ✅
+
+---
+Task ID: 14
+Agent: main
+Task: Fix footer not following system settings + AdminUsers Bidang field not from Data Master
+
+Work Log:
+- **Issue 1: Footer hardcoded values**
+  - ASN Homepage footer had hardcoded institution name, address, phone, email, website
+  - Admin Layout footer had hardcoded copyright text
+  - Fixed useAppBranding hook to include institution info fields: instansiName, daerah, instansiEmail, instansiPhone, instansiAddress
+  - Added fallback for both camelCase (AdminSettings) and snake_case (seed) key formats:
+    - instansiName || instansi
+    - instansiEmail || email_instansi
+    - instansiPhone || telepon_instansi
+    - instansiAddress || alamat_instansi
+  - Updated ASN Homepage footer to use dynamic values from useAppBranding
+  - Updated ASN Homepage header to use appShortName and instansiName
+  - Updated Admin Layout footer to use appShortName, instansiName, and appName
+  - Footer gracefully handles missing values (shows "Belum diatur" for empty fields, hides sections without data)
+
+- **Issue 2: AdminUsers Bidang/Status hardcoded**
+  - AdminUsers edit dialog had hardcoded Bidang options: Pendapatan, Belanja, Aset, Umum
+  - AdminUsers edit dialog had hardcoded Status ASN options: PNS, PPPK
+  - If admin added new Bidang or Status via Data Master, they wouldn't appear in user edit form
+  - Added bidangOptions and statusASNOptions state variables
+  - Added useEffect to fetch from /api/bidang and /api/status-asn on component mount
+  - Replaced hardcoded SelectItem values with dynamic map over fetched options
+  - Added empty state handling ("Tidak ada data bidang/status")
+  - Falls back to default options if API fetch fails
+
+Stage Summary:
+- ASN Homepage footer now reads from system settings (instansiName, instansiAddress, instansiPhone, instansiEmail) ✅
+- ASN Homepage header now shows dynamic appShortName and instansiName ✅
+- Admin Layout footer now shows dynamic appShortName, instansiName, appName ✅
+- useAppBranding hook now supports both camelCase and snake_case settings keys ✅
+- AdminUsers edit dialog Bidang dropdown now fetches from Data Master API ✅
+- AdminUsers edit dialog Status ASN dropdown now fetches from Data Master API ✅
+- Lint passes (only pre-existing custom-server.js warnings) ✅

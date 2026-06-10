@@ -7,6 +7,11 @@ interface AppBranding {
   favicon: string
   appName: string
   appShortName: string
+  instansiName: string
+  daerah: string
+  instansiEmail: string
+  instansiPhone: string
+  instansiAddress: string
 }
 
 const DEFAULT_BRANDING: AppBranding = {
@@ -14,6 +19,11 @@ const DEFAULT_BRANDING: AppBranding = {
   favicon: '/logo.svg',
   appName: 'SIDATA BKAD',
   appShortName: 'SIDATA',
+  instansiName: 'Badan Keuangan dan Aset Daerah',
+  daerah: 'Kabupaten Seruyan, Kalimantan Tengah',
+  instansiEmail: '',
+  instansiPhone: '',
+  instansiAddress: '',
 }
 
 // Cache branding in memory
@@ -50,6 +60,11 @@ function ensureBrandingFetched() {
         favicon: data.appFavicon || '/logo.svg',
         appName: data.appName || 'SIDATA BKAD',
         appShortName: data.appShortName || 'SIDATA',
+        instansiName: data.instansiName || data.instansi || DEFAULT_BRANDING.instansiName,
+        daerah: data.daerah || DEFAULT_BRANDING.daerah,
+        instansiEmail: data.instansiEmail || data.email_instansi || '',
+        instansiPhone: data.instansiPhone || data.telepon_instansi || '',
+        instansiAddress: data.instansiAddress || data.alamat_instansi || '',
       }
       fetchPromise = null
       emitChange()
