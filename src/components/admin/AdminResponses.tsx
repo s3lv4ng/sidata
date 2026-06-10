@@ -783,7 +783,7 @@ export default function AdminResponses() {
             </Card>
           ) : (
             <Card className="border-border/60 flex flex-col max-h-[calc(100vh-380px)]">
-              <ScrollArea className="flex-1">
+              <div className="flex-1 overflow-auto">
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/30">
@@ -849,7 +849,7 @@ export default function AdminResponses() {
                     ))}
                   </TableBody>
                 </Table>
-              </ScrollArea>
+              </div>
 
               {/* Pagination */}
               <PaginationBar
@@ -901,7 +901,7 @@ export default function AdminResponses() {
                       </p>
                     </div>
                   ) : (
-                    <ScrollArea className="max-h-64">
+                    <div className="max-h-64 overflow-auto">
                       <div className="space-y-2">
                         {filteredNotResponded.map((asn) => (
                           <div
@@ -942,7 +942,7 @@ export default function AdminResponses() {
                           </div>
                         ))}
                       </div>
-                    </ScrollArea>
+                    </div>
                   )}
                 </CardContent>
               </CollapsibleContent>

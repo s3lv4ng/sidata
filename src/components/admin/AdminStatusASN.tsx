@@ -322,7 +322,7 @@ export default function AdminStatusASN() {
         </Card>
       ) : (
         <Card className="border-border/60 overflow-hidden">
-          <ScrollArea className="max-h-[calc(100vh-320px)]">
+          <div className="max-h-[calc(100vh-320px)] overflow-auto">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/30">
@@ -424,7 +424,7 @@ export default function AdminStatusASN() {
                 })}
               </TableBody>
             </Table>
-          </ScrollArea>
+          </div>
         </Card>
       )}
 

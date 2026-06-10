@@ -520,7 +520,7 @@ export default function AdminASN() {
         </Card>
       ) : (
         <Card className="border-border/60 flex flex-col max-h-[calc(100vh-260px)]">
-          <ScrollArea className="flex-1">
+          <div className="flex-1 overflow-auto">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50 border-b">
@@ -627,7 +627,7 @@ export default function AdminASN() {
                 ))}
               </TableBody>
             </Table>
-          </ScrollArea>
+          </div>
 
           {/* Pagination */}
           <PaginationBar

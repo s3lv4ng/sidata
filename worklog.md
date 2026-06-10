@@ -832,3 +832,40 @@ Stage Summary:
 - Consistent color coding across all components for easy identification ✅
 - Dark mode support included in all button styles ✅
 - No new lint errors ✅
+
+---
+Task ID: 13
+Agent: main
+Task: Fix card overflow - content spilling out of cards (perbaiki semua tampilan card keluar)
+
+Work Log:
+- Analyzed user-uploaded screenshot showing table content overflowing outside card boundaries
+- Identified root cause: base Card component in ui/card.tsx had no `overflow-hidden`, allowing content to spill past rounded corners and borders
+- Secondary issue: ScrollArea wrapping Table components created conflicts where both tried to manage horizontal scrolling, causing table content to overflow
+- Systematic fixes applied:
+
+  1. **Base Card component fix** (ui/card.tsx):
+     - Added `overflow-hidden` to the Card default className
+     - This ensures all cards clip content properly with rounded corners
+
+  2. **Replaced ScrollArea with overflow-auto divs** in all table-containing components:
+     - AdminASN.tsx: `<ScrollArea className="flex-1">` → `<div className="flex-1 overflow-auto">`
+     - AdminUsers.tsx: Same replacement
+     - AdminResponses.tsx: Same replacement for main table + `<ScrollArea className="max-h-64">` → `<div className="max-h-64 overflow-auto">` for not-responded list
+     - AdminActivityLogs.tsx: `<ScrollArea className="h-full">` → `<div className="h-full overflow-auto">`
+     - AdminBidang.tsx: `<ScrollArea className="max-h-[calc(100vh-320px)]">` → `<div className="max-h-[calc(100vh-320px)] overflow-auto">`
+     - AdminStatusASN.tsx: Same replacement as AdminBidang
+     - AdminReports.tsx: `<ScrollArea className="max-h-64">` → `<div className="max-h-64 overflow-auto">`
+     - DashboardOverview.tsx: 3 ScrollArea replacements (max-h-64 and max-h-72)
+
+  3. **Why ScrollArea → overflow-auto div**: ScrollArea from Radix doesn't handle horizontal table overflow well. The Table component already wraps content in `overflow-x-auto`, creating nested scroll container conflicts. Using plain `overflow-auto` divs eliminates this conflict while maintaining scroll functionality.
+
+- Lint passes (only pre-existing custom-server.js warnings)
+- Verified with agent-browser + VLM: Dashboard, Data ASN, and Hasil Pengisian pages all show properly contained cards with no overflow
+
+Stage Summary:
+- Base Card component now has `overflow-hidden` — all cards clip content properly ✅
+- All table ScrollArea wrappers replaced with `overflow-auto` divs — no more horizontal overflow conflicts ✅
+- 8 admin components + DashboardOverview fixed ✅
+- All content properly contained within card boundaries ✅
+- No new lint errors ✅

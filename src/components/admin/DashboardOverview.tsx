@@ -628,7 +628,7 @@ export default function DashboardOverview() {
                 <p className="text-[10px] mt-0.5">Semua form dalam batas waktu aman</p>
               </div>
             ) : (
-              <ScrollArea className="max-h-64">
+              <div className="max-h-64 overflow-auto">
                 <div className="space-y-2">
                   {deadlineForms.map((form) => {
                     const urgencyColors = {
@@ -692,7 +692,7 @@ export default function DashboardOverview() {
                     )
                   })}
                 </div>
-              </ScrollArea>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -833,7 +833,7 @@ export default function DashboardOverview() {
                 <p className="text-sm">Semua form sudah terisi</p>
               </div>
             ) : (
-              <ScrollArea className="max-h-64">
+              <div className="max-h-64 overflow-auto">
                 <div className="space-y-1.5">
                   {topUnresponded.map((item, index) => (
                     <button
@@ -870,7 +870,7 @@ export default function DashboardOverview() {
                     </button>
                   ))}
                 </div>
-              </ScrollArea>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -1002,7 +1002,7 @@ export default function DashboardOverview() {
                 <p>Belum ada aktivitas</p>
               </div>
             ) : (
-              <ScrollArea className="max-h-72">
+              <div className="max-h-72 overflow-auto">
                 <div className="space-y-1">
                   {stats.recentActivity.slice(0, 10).map((activity, index) => (
                     <div key={activity.id}>
@@ -1030,7 +1030,7 @@ export default function DashboardOverview() {
                     </div>
                   ))}
                 </div>
-              </ScrollArea>
+              </div>
             )}
           </CardContent>
         </Card>

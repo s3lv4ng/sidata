@@ -497,7 +497,7 @@ export default function AdminUsers() {
           </div>
         ) : (
           <>
-            <ScrollArea className="flex-1">
+            <div className="flex-1 overflow-auto">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50 border-b">
@@ -634,7 +634,7 @@ export default function AdminUsers() {
                   ))}
                 </TableBody>
               </Table>
-            </ScrollArea>
+            </div>
 
             {/* Pagination */}
             <PaginationBar

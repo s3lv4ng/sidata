@@ -1012,7 +1012,7 @@ export default function AdminReports() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-4 pt-2">
-                <ScrollArea className="max-h-64">
+                <div className="max-h-64 overflow-auto">
                   <div className="space-y-2">
                     {reportData.unrespondedASN.map((asn) => (
                       <div
@@ -1051,7 +1051,7 @@ export default function AdminReports() {
                       </div>
                     ))}
                   </div>
-                </ScrollArea>
+                </div>
               </CardContent>
             </Card>
           )}

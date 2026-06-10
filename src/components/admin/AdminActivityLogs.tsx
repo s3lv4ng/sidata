@@ -324,7 +324,7 @@ export default function AdminActivityLogs() {
               <p className="text-xs mt-1">Coba ubah filter pencarian Anda</p>
             </div>
           ) : (
-            <ScrollArea className="h-full">
+            <div className="h-full overflow-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -366,7 +366,7 @@ export default function AdminActivityLogs() {
                   ))}
                 </TableBody>
               </Table>
-            </ScrollArea>
+            </div>
           )}
         </CardContent>
 
