@@ -732,3 +732,66 @@ Stage Summary:
 - Upload error feedback: Users now see clear error messages when uploads fail
 - Google Drive upload: Attempted but non-blocking (known My Drive quota limitation)
 - All lint passes (only pre-existing custom-server.js warnings)
+
+---
+Task ID: ui-fix-tables
+Agent: frontend-styling-expert
+Task: Fix admin table UI display issues in AdminUsers and AdminASN
+
+Work Log:
+- Read both AdminUsers.tsx and AdminASN.tsx to understand current table structure and identify issues
+- **AdminUsers.tsx fixes:**
+  - Table header: Added `bg-muted/50 border-b` classes to `<TableRow>` for visual distinction
+  - Email column: Changed `max-w-[150px]` to `min-w-[200px]`, added `title={user.email}` for hover tooltip
+  - Email header: Added `min-w-[200px]` to TableHead for consistent column sizing
+  - Name column: Added `title={user.name}` to name `<p>` element for hover tooltip
+  - Bidang sub-text: Added `title={user.bidang}` for hover tooltip
+  - Aksi column: Reduced from `w-[160px]` to `w-[140px]` since icon buttons are small enough
+- **AdminASN.tsx fixes:**
+  - Table header: Changed from `bg-muted/30` to `bg-muted/50 border-b` for clearer header separation
+  - Name column: Removed `max-w-[200px]` from name `<p>`, added `title={asn.name}` for hover tooltip
+  - Email under name: Removed `max-w-[200px]` from email `<p>`, added `title={asn.email}` for hover tooltip
+  - Jabatan column: Changed `max-w-[180px]` to `min-w-[160px]`, added `title` attribute for hover tooltip
+  - Jabatan header: Changed `min-w-[150px]` to `min-w-[160px]` to match column content width
+- Verified lint passes (only pre-existing custom-server.js warnings)
+
+Stage Summary:
+- Both tables now have better header visual distinction with bg-muted/50 and border-b
+- Email and name columns no longer truncate at restrictive max-widths
+- All truncated text elements have `title` attributes for hover tooltips
+- Column width proportions improved: content-heavy columns get more space, action columns tightened
+- No business logic changes, only display/styling improvements
+- Lint passes with 0 new errors (only pre-existing custom-server.js warnings)
+
+---
+Task ID: ui-fix-display
+Agent: main
+Task: Fix display/UI issues reported by user (perbaiki tampilan)
+
+Work Log:
+- Analyzed user's uploaded screenshot with VLM - identified AdminUsers table with truncated emails, poor header styling, and column width issues
+- Took current screenshots of both AdminUsers and AdminASN pages
+- VLM analysis confirmed: email truncation (max-w-[150px]), no header visual distinction, cramped columns
+- Fixed AdminUsers.tsx:
+  - Email column: Changed from `max-w-[150px]` to `min-w-[200px]`, added `title={user.email}` for hover tooltip
+  - Table header: Added `bg-muted/50 border-b` classes for visual distinction
+  - Name column: Added `title={user.name}` for tooltip on hover
+  - Bidang sub-text: Added `title={user.bidang}` for tooltip
+  - Aksi column: Reduced from `w-[160px]` to `w-[140px]`
+  - Email header: Added `min-w-[200px]`
+- Fixed AdminASN.tsx:
+  - Table header: Upgraded from `bg-muted/30` to `bg-muted/50 border-b`
+  - Name column: Removed `max-w-[200px]`, added `title={asn.name}`
+  - Email under name: Removed `max-w-[200px]`, added `title={asn.email}`
+  - Jabatan column: Changed from `max-w-[180px]` to `min-w-[160px]`, added `title` attribute
+  - Jabatan header: Changed from `min-w-[150px]` to `min-w-[160px]`
+- Verified with VLM analysis: Emails now fully visible, headers visually distinct, no truncation
+- Dashboard and sidebar also checked - no issues found
+- Lint passes (only pre-existing custom-server.js warnings)
+- No runtime errors in dev server
+
+Stage Summary:
+- AdminUsers table: Email addresses now display fully, header is visually distinct, tooltips on hover
+- AdminASN table: No more text truncation, better header styling, tooltips for all truncated-capable fields
+- Both tables have proper column proportions matching content needs
+- VLM-verified: "The table UI is high-quality and well-designed"

@@ -500,14 +500,14 @@ export default function AdminUsers() {
             <ScrollArea className="flex-1">
               <Table>
                 <TableHeader>
-                  <TableRow>
+                  <TableRow className="bg-muted/50 border-b">
                     <TableHead className="w-[40px] text-center">No</TableHead>
                     <TableHead>NIP</TableHead>
                     <TableHead>Nama</TableHead>
                     <TableHead className="text-center">Role</TableHead>
-                    <TableHead>Email</TableHead>
+                    <TableHead className="min-w-[200px]">Email</TableHead>
                     <TableHead className="text-center">Status</TableHead>
-                    <TableHead className="text-center w-[160px]">Aksi</TableHead>
+                    <TableHead className="text-center w-[140px]">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -529,9 +529,9 @@ export default function AdminUsers() {
                             {user.name.charAt(0).toUpperCase()}
                           </div>
                           <div className="min-w-0">
-                            <p className="text-sm font-medium truncate">{user.name}</p>
+                            <p className="text-sm font-medium truncate" title={user.name}>{user.name}</p>
                             {user.bidang && (
-                              <p className="text-[10px] text-muted-foreground truncate">
+                              <p className="text-[10px] text-muted-foreground truncate" title={user.bidang}>
                                 {user.bidang}
                               </p>
                             )}
@@ -564,7 +564,7 @@ export default function AdminUsers() {
                         {user.email ? (
                           <span className="flex items-center gap-1">
                             <Mail className="w-3 h-3" />
-                            <span className="truncate max-w-[150px] inline-block">{user.email}</span>
+                            <span className="truncate min-w-[200px] inline-block" title={user.email}>{user.email}</span>
                           </span>
                         ) : (
                           '-'

@@ -523,11 +523,11 @@ export default function AdminASN() {
           <ScrollArea className="flex-1">
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/30">
+                <TableRow className="bg-muted/50 border-b">
                   <TableHead className="w-[50px] text-center">No</TableHead>
                   <TableHead className="min-w-[140px]">NIP</TableHead>
                   <TableHead className="min-w-[180px]">Nama</TableHead>
-                  <TableHead className="min-w-[150px]">Jabatan</TableHead>
+                  <TableHead className="min-w-[160px]">Jabatan</TableHead>
                   <TableHead className="w-[130px]">Pangkat/Gol.</TableHead>
                   <TableHead className="w-[110px]">Bidang</TableHead>
                   <TableHead className="w-[90px] text-center">Status</TableHead>
@@ -545,18 +545,18 @@ export default function AdminASN() {
                     </TableCell>
                     <TableCell>
                       <div className="min-w-0">
-                        <p className="font-medium text-sm text-foreground truncate max-w-[200px]">
+                        <p className="font-medium text-sm text-foreground truncate" title={asn.name}>
                           {asn.name}
                         </p>
                         {asn.email && (
-                          <p className="text-[11px] text-muted-foreground truncate max-w-[200px]">
+                          <p className="text-[11px] text-muted-foreground truncate" title={asn.email}>
                             {asn.email}
                           </p>
                         )}
                       </div>
                     </TableCell>
                     <TableCell>
-                      <span className="text-sm text-foreground truncate max-w-[180px] block">
+                      <span className="text-sm text-foreground truncate min-w-[160px] block" title={asn.jabatan || '—'}>
                         {asn.jabatan || '—'}
                       </span>
                     </TableCell>
