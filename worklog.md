@@ -936,3 +936,44 @@ Stage Summary:
 - StatusASN dropdown in Edit User now reliably fetches from Data Master ✅
 - Both dropdowns preserve current value even if not in master data (edge case handling)
 - No runtime errors on ASN homepage or Admin User Management page
+
+---
+Task ID: 12
+Agent: main
+Task: Fix Google login not working (tidak bisa login menggunakan Google)
+
+Work Log:
+- Investigated Google OAuth flow: LoginForm → signIn('google') → POST /api/auth/signin/google → Google OAuth redirect
+- Root cause: NEXTAUTH_URL was not configured, causing Google OAuth redirect URI to be `http://localhost:3000/api/auth/callback/google` instead of the external URL
+- When accessed through Caddy reverse proxy, NextAuth couldn't determine the correct external URL
+- Google OAuth returned `redirect_uri_mismatch` error because the redirect URI didn't match what was configured in Google Cloud Console
+- Fix 1: Updated `/src/app/api/auth/[...nextauth]/route.ts` with dynamic NEXTAUTH_URL detection:
+  - Reads X-Forwarded-Host, X-Forwarded-Proto headers from Caddy proxy
+  - Falls back to Host header if not localhost:3000
+  - Falls back to Origin header from browser POST requests
+  - Falls back to Referer header
+  - Sets process.env.NEXTAUTH_URL dynamically before each NextAuth handler call
+- Fix 2: Updated Caddyfile to add X-Forwarded-Host header to both proxy handles
+- Fix 3: Improved Google login error handling in LoginForm.tsx:
+  - Changed to `redirect: false` for better in-app error handling
+  - Added specific error messages for OAuthAccountNotLinked, AccessDenied, and redirect_uri_mismatch
+  - Added manual redirect to Google OAuth URL when signIn returns a URL
+- Fix 4: Added prominent Redirect URI display in AdminSettings:
+  - Shows the correct redirect URI dynamically using window.location.origin
+  - Includes copy-to-clipboard button
+  - Includes instructions for Google Cloud Console configuration
+  - Added Link2 and Copy icons from lucide-react
+- Also verified other pending bugs:
+  - ASNHomepage footer: appName is properly defined from useAppBranding() hook, footer shows correct system settings
+  - AdminUsers bidang field: already fetches from /api/bidang Data Master, dropdown shows Aklap&SIPD, Anggaran, Aset, Perbend, Sekretariat
+- Created cron job for continuous development (every 15 minutes)
+
+Stage Summary:
+- Google login fix: Dynamic NEXTAUTH_URL detection for reverse proxy compatibility ✅
+- Redirect URI prominently displayed in admin settings with copy button ✅
+- Better error handling for Google login flow ✅
+- ASNHomepage footer: Working correctly, shows system settings ✅
+- AdminUsers bidang: Already fetching from Data Master ✅
+- IMPORTANT: User needs to add the correct redirect URI to Google Cloud Console (shown in admin settings)
+- Lint passes (only pre-existing custom-server.js warnings)
+- Dev server running on port 3000 without errors

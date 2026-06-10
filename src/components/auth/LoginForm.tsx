@@ -99,7 +99,26 @@ export default function LoginForm() {
     setError('')
     setIsLoading(true)
     try {
-      await signIn('google', { callbackUrl: '/' })
+      // Using redirect: false to handle errors in-app instead of redirecting to error page
+      const result = await signIn('google', { callbackUrl: '/', redirect: false })
+      if (result?.error) {
+        // Show user-friendly error message
+        if (result.error === 'OAuthAccountNotLinked') {
+          setError('Akun Google sudah terhubung dengan akun lain. Hubungi administrator.')
+        } else if (result.error === 'AccessDenied') {
+          setError('Akses ditolak. Akun Anda mungkin tidak aktif.')
+        } else if (result.url) {
+          // Got a redirect URL - navigate to it manually
+          window.location.href = result.url
+          return
+        } else {
+          setError('Gagal login dengan Google. Pastikan redirect URI sudah dikonfigurasi di Google Cloud Console.')
+        }
+        setIsLoading(false)
+      } else if (result?.url) {
+        // Redirect to Google OAuth page
+        window.location.href = result.url
+      }
     } catch {
       setError('Gagal login dengan Google. Silakan coba lagi.')
       setIsLoading(false)

@@ -50,6 +50,8 @@ import {
   ChevronDown,
   Image as ImageIcon,
   X,
+  Link2,
+  Copy,
 } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 
@@ -1047,31 +1049,62 @@ export default function AdminSettings() {
                     const hasClientId = !!(settings.googleLoginClientId || '').trim()
                     const hasClientSecret = !!(settings.googleLoginClientSecret || '').trim()
                     const isFullyConfigured = hasClientId && hasClientSecret
+                    const redirectUri = typeof window !== 'undefined' ? `${window.location.origin}/api/auth/callback/google` : ''
                     return (
-                      <div className={`flex items-center gap-2 rounded-lg border p-2.5 ${
-                        isFullyConfigured
-                          ? 'border-emerald-200 bg-emerald-50/50 dark:border-emerald-800 dark:bg-emerald-900/10'
-                          : 'border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-900/10'
-                      }`}>
-                        {isFullyConfigured ? (
-                          <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                        ) : (
-                          <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-                        )}
-                        <span className={`text-xs font-medium ${
+                      <div className="space-y-2">
+                        <div className={`flex items-center gap-2 rounded-lg border p-2.5 ${
                           isFullyConfigured
-                            ? 'text-emerald-700 dark:text-emerald-300'
-                            : 'text-amber-700 dark:text-amber-300'
+                            ? 'border-emerald-200 bg-emerald-50/50 dark:border-emerald-800 dark:bg-emerald-900/10'
+                            : 'border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-900/10'
                         }`}>
-                          {isFullyConfigured
-                            ? 'Google OAuth terkonfigurasi. Login Google akan aktif setelah disimpan.'
-                            : !hasClientId && !hasClientSecret
-                              ? 'Client ID dan Client Secret belum diisi. Login Google tidak akan berfungsi.'
-                              : !hasClientId
-                                ? 'Client ID belum diisi.'
-                                : 'Client Secret belum diisi.'
-                          }
-                        </span>
+                          {isFullyConfigured ? (
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                          )}
+                          <span className={`text-xs font-medium ${
+                            isFullyConfigured
+                              ? 'text-emerald-700 dark:text-emerald-300'
+                              : 'text-amber-700 dark:text-amber-300'
+                          }`}>
+                            {isFullyConfigured
+                              ? 'Google OAuth terkonfigurasi. Login Google akan aktif setelah disimpan.'
+                              : !hasClientId && !hasClientSecret
+                                ? 'Client ID dan Client Secret belum diisi. Login Google tidak akan berfungsi.'
+                                : !hasClientId
+                                  ? 'Client ID belum diisi.'
+                                  : 'Client Secret belum diisi.'
+                            }
+                          </span>
+                        </div>
+                        {/* Redirect URI Display */}
+                        {redirectUri && (
+                          <div className="rounded-lg border border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-900/10 p-2.5">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Link2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                              <span className="text-xs font-medium text-blue-700 dark:text-blue-300">Redirect URI untuk Google Cloud Console</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <code className="text-[11px] bg-white dark:bg-gray-900 px-2 py-1 rounded border border-blue-200 dark:border-blue-800 break-all flex-1 select-all text-blue-800 dark:text-blue-200">
+                                {redirectUri}
+                              </code>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 shrink-0"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(redirectUri)
+                                  addNotification('Redirect URI disalin ke clipboard', 'success')
+                                }}
+                              >
+                                <Copy className="w-3.5 h-3.5" />
+                              </Button>
+                            </div>
+                            <p className="text-[10px] text-blue-600/70 dark:text-blue-400/70 mt-1">
+                              Tambahkan URI ini di Google Cloud Console → APIs &amp; Services → Credentials → OAuth Client → Authorized redirect URIs
+                            </p>
+                          </div>
+                        )}
                       </div>
                     )
                   })()}
