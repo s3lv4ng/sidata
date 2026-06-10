@@ -692,3 +692,43 @@ Stage Summary:
 - Pagination auto-hides when totalPages <= 1
 - Search/filter changes reset pagination to page 1
 - All pages verified working via agent-browser
+
+---
+Task ID: upload-fix
+Agent: main
+Task: Fix file/image upload failure - "tida bisa upload gambar/file gagal"
+
+Work Log:
+- Root cause identified: `/api/upload/route.ts` was COMPLETELY MISSING
+  - FormFiller.tsx calls `POST /api/upload` for file uploads (file_upload, image_upload, multi_upload fields)
+  - The route never existed, causing ALL file uploads from form submissions to fail with 404
+- Created `/api/upload/route.ts` with full functionality:
+  - Validates file size (max 10MB) and MIME types
+  - Generates safe unique filenames with timestamp + random suffix
+  - Saves locally using `saveUploadedFile()` from upload-utils (handles read-only filesystem with /tmp fallback)
+  - Creates bidang subdirectory for organizational structure (e.g., `/upload/Aset/`)
+  - Attempts Google Drive upload via `uploadToBidangFolder()` (non-blocking, won't fail if Drive unavailable)
+  - Returns filePath, fileName, driveFileId, driveLink, driveUploaded in response
+  - Logs upload activity to ActivityLog table
+- Fixed `/api/settings/upload-brand/route.ts` (EROFS error):
+  - Replaced `writeFileSync` with `saveUploadedFile()` from upload-utils
+  - Replaced `unlinkSync` with async `fs/promises.unlink` via `resolveFilePath()`
+  - Now handles read-only filesystems gracefully (falls back to /tmp)
+- Added upload error feedback in FormFiller.tsx:
+  - Added `uploadErrors` state to track per-field upload errors
+  - Shows red error messages below file/image upload fields when upload fails
+  - Displays specific error messages from API (e.g., "Ukuran file terlalu besar")
+  - Shows "Terjadi kesalahan jaringan" for network errors
+  - Clears error when user retries upload
+- Verified with API testing:
+  - File upload: POST /api/upload → 201 response with correct data
+  - File serving: GET /api/file?path=... → 200 with correct content
+  - Brand upload: correctly validates image types (rejects non-images with 400)
+  - Google Drive upload attempted but fails with quota error (known My Drive issue, non-blocking)
+
+Stage Summary:
+- CRITICAL BUG FIXED: File uploads from forms now work (missing API route created)
+- EROFS filesystem error FIXED: Brand upload uses /tmp fallback for read-only FS
+- Upload error feedback: Users now see clear error messages when uploads fail
+- Google Drive upload: Attempted but non-blocking (known My Drive quota limitation)
+- All lint passes (only pre-existing custom-server.js warnings)

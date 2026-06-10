@@ -91,6 +91,7 @@ export default function FormFiller() {
   const [submitSuccess, setSubmitSuccess] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [uploadingFields, setUploadingFields] = useState<Set<string>>(new Set())
+  const [uploadErrors, setUploadErrors] = useState<Record<string, string>>({})
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, { name: string; path: string; driveLink?: string; driveUploaded?: boolean }>>({})
   const [multiUploadedFiles, setMultiUploadedFiles] = useState<Record<string, Array<{ name: string; path: string; driveLink?: string; driveUploaded?: boolean }>>>({})
   const [ratingValues, setRatingValues] = useState<Record<string, number>>({})
@@ -168,6 +169,7 @@ export default function FormFiller() {
 
   const handleFileUpload = async (fieldId: string, file: File) => {
     setUploadingFields((prev) => new Set(prev).add(fieldId))
+    setUploadErrors((prev) => { const next = { ...prev }; delete next[fieldId]; return next })
     try {
       const formData = new FormData()
       formData.append('file', file)
@@ -204,9 +206,13 @@ export default function FormFiller() {
               : a
           )
         )
+      } else {
+        const data = await res.json().catch(() => ({ error: 'Gagal mengunggah file' }))
+        setUploadErrors((prev) => ({ ...prev, [fieldId]: data.error || 'Gagal mengunggah file' }))
       }
     } catch (err) {
       console.error('Upload failed:', err)
+      setUploadErrors((prev) => ({ ...prev, [fieldId]: 'Terjadi kesalahan jaringan. Coba lagi.' }))
     } finally {
       setUploadingFields((prev) => {
         const next = new Set(prev)
@@ -227,8 +233,10 @@ export default function FormFiller() {
 
   const handleMultiFileUpload = async (fieldId: string, files: FileList) => {
     setUploadingFields((prev) => new Set(prev).add(fieldId))
+    setUploadErrors((prev) => { const next = { ...prev }; delete next[fieldId]; return next })
     try {
       const uploaded: Array<{ name: string; path: string; driveFileId?: string; driveLink?: string; driveUploaded?: boolean }> = []
+      let hasError = false
       for (let i = 0; i < files.length; i++) {
         const file = files[i]
         const formData = new FormData()
@@ -250,7 +258,12 @@ export default function FormFiller() {
             driveLink: data.driveLink || undefined,
             driveUploaded: data.driveUploaded || false,
           })
+        } else {
+          hasError = true
         }
+      }
+      if (hasError && uploaded.length === 0) {
+        setUploadErrors((prev) => ({ ...prev, [fieldId]: 'Gagal mengunggah beberapa file. Coba lagi.' }))
       }
 
       setMultiUploadedFiles((prev) => ({
@@ -656,6 +669,12 @@ export default function FormFiller() {
 
                     {field.type === 'file_upload' && (
                       <div className="space-y-2">
+                        {uploadErrors[field.id] && (
+                          <p className="text-xs text-destructive flex items-center gap-1">
+                            <AlertCircle className="w-3 h-3" />
+                            {uploadErrors[field.id]}
+                          </p>
+                        )}
                         {uploadedFiles[field.id] ? (
                           <div className="space-y-1.5">
                             <div className="flex items-center gap-2 rounded-md border border-primary/20 bg-primary/5 p-3">
@@ -734,6 +753,12 @@ export default function FormFiller() {
 
                     {field.type === 'multi_upload' && (
                       <div className="space-y-3">
+                        {uploadErrors[field.id] && (
+                          <p className="text-xs text-destructive flex items-center gap-1">
+                            <AlertCircle className="w-3 h-3" />
+                            {uploadErrors[field.id]}
+                          </p>
+                        )}
                         {multiUploadedFiles[field.id] && multiUploadedFiles[field.id].length > 0 && (
                           <div className="space-y-1.5">
                             {multiUploadedFiles[field.id].map((f, fIdx) => (
@@ -876,6 +901,12 @@ export default function FormFiller() {
 
                     {field.type === 'image_upload' && (
                       <div className="space-y-2">
+                        {uploadErrors[field.id] && (
+                          <p className="text-xs text-destructive flex items-center gap-1">
+                            <AlertCircle className="w-3 h-3" />
+                            {uploadErrors[field.id]}
+                          </p>
+                        )}
                         {uploadedFiles[field.id] ? (
                           <div className="space-y-1.5">
                             <div className="flex items-center gap-2 rounded-md border border-primary/20 bg-primary/5 p-3">

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { writeFileSync, unlinkSync, existsSync, mkdirSync } from 'fs'
-import { join } from 'path'
+import { saveUploadedFile, resolveFilePath } from '@/lib/upload-utils'
 import { randomUUID } from 'crypto'
 
 const ALLOWED_TYPES = new Set([
@@ -16,25 +15,21 @@ const ALLOWED_TYPES = new Set([
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB
 
-const UPLOAD_DIR = join(process.cwd(), 'public', 'uploads', 'brand')
-
-function ensureUploadDir() {
-  if (!existsSync(UPLOAD_DIR)) {
-    mkdirSync(UPLOAD_DIR, { recursive: true })
-  }
-}
-
 function getExtension(filename: string): string {
   const parts = filename.split('.')
   if (parts.length < 2) return ''
   return parts[parts.length - 1].toLowerCase()
 }
 
-function deleteFileIfExists(filePath: string) {
+async function deleteOldFile(settingKey: string) {
   try {
-    const fullPath = join(process.cwd(), 'public', filePath)
-    if (existsSync(fullPath)) {
-      unlinkSync(fullPath)
+    const existing = await db.systemSetting.findUnique({ where: { key: settingKey } })
+    if (existing?.value) {
+      const resolved = await resolveFilePath(existing.value)
+      if (resolved) {
+        const { unlink } = await import('fs/promises')
+        await unlink(resolved)
+      }
     }
   } catch {
     // Silently ignore errors
@@ -70,59 +65,49 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    ensureUploadDir()
-
     let logoPath: string | null = null
     let faviconPath: string | null = null
 
     // Handle logo upload
     if (logoFile) {
-      // Delete old logo
-      const oldLogo = await db.systemSetting.findUnique({ where: { key: 'logoPath' } })
-      if (oldLogo?.value) {
-        deleteFileIfExists(oldLogo.value)
-      }
+      // Delete old logo file
+      await deleteOldFile('logoPath')
 
       const ext = getExtension(logoFile.name) || 'png'
       const uniqueName = `logo-${randomUUID()}.${ext}`
-      const relativePath = `/uploads/brand/${uniqueName}`
-      const fullPath = join(UPLOAD_DIR, uniqueName)
-
       const buffer = Buffer.from(await logoFile.arrayBuffer())
-      writeFileSync(fullPath, buffer)
+
+      // Save using upload-utils (handles read-only filesystem)
+      const { accessPath } = await saveUploadedFile(buffer, uniqueName, 'brand')
 
       await db.systemSetting.upsert({
         where: { key: 'logoPath' },
-        update: { value: relativePath },
-        create: { key: 'logoPath', value: relativePath },
+        update: { value: accessPath },
+        create: { key: 'logoPath', value: accessPath },
       })
 
-      logoPath = relativePath
+      logoPath = accessPath
     }
 
     // Handle favicon upload
     if (faviconFile) {
-      // Delete old favicon
-      const oldFavicon = await db.systemSetting.findUnique({ where: { key: 'faviconPath' } })
-      if (oldFavicon?.value) {
-        deleteFileIfExists(oldFavicon.value)
-      }
+      // Delete old favicon file
+      await deleteOldFile('faviconPath')
 
       const ext = getExtension(faviconFile.name) || 'ico'
       const uniqueName = `favicon-${randomUUID()}.${ext}`
-      const relativePath = `/uploads/brand/${uniqueName}`
-      const fullPath = join(UPLOAD_DIR, uniqueName)
-
       const buffer = Buffer.from(await faviconFile.arrayBuffer())
-      writeFileSync(fullPath, buffer)
+
+      // Save using upload-utils (handles read-only filesystem)
+      const { accessPath } = await saveUploadedFile(buffer, uniqueName, 'brand')
 
       await db.systemSetting.upsert({
         where: { key: 'faviconPath' },
-        update: { value: relativePath },
-        create: { key: 'faviconPath', value: relativePath },
+        update: { value: accessPath },
+        create: { key: 'faviconPath', value: accessPath },
       })
 
-      faviconPath = relativePath
+      faviconPath = accessPath
     }
 
     // Get current values for response
@@ -162,7 +147,16 @@ export async function DELETE(request: NextRequest) {
     const existing = await db.systemSetting.findUnique({ where: { key } })
 
     if (existing?.value) {
-      deleteFileIfExists(existing.value)
+      // Delete the file from storage
+      try {
+        const resolved = await resolveFilePath(existing.value)
+        if (resolved) {
+          const { unlink } = await import('fs/promises')
+          await unlink(resolved)
+        }
+      } catch {
+        // Ignore file deletion errors
+      }
       await db.systemSetting.delete({ where: { key } })
     }
 
