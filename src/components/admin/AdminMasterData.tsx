@@ -344,20 +344,20 @@ export default function AdminMasterData() {
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center gap-1 shrink-0">
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
+                            className="h-8 w-8 text-slate-600 hover:text-slate-800 hover:bg-slate-50 border-slate-200 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800 dark:border-slate-700"
                             onClick={() => handleOpenEdit(item, 'bidang')}
                             title="Edit"
                           >
                             <Pencil className="w-4 h-4" />
                           </Button>
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="icon"
-                            className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/30"
+                            className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50 border-red-200 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/30 dark:border-red-800"
                             onClick={() => confirmDelete(item, 'bidang')}
                             title="Hapus"
                           >
@@ -456,20 +456,20 @@ export default function AdminMasterData() {
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center gap-1 shrink-0">
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
+                            className="h-8 w-8 text-slate-600 hover:text-slate-800 hover:bg-slate-50 border-slate-200 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800 dark:border-slate-700"
                             onClick={() => handleOpenEdit(item, 'status')}
                             title="Edit"
                           >
                             <Pencil className="w-4 h-4" />
                           </Button>
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="icon"
-                            className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/30"
+                            className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50 border-red-200 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/30 dark:border-red-800"
                             onClick={() => confirmDelete(item, 'status')}
                             title="Hapus"
                           >

@@ -901,9 +901,9 @@ export default function AdminReports() {
                           <TableCell>
                             <div className="flex items-center justify-center">
                               <Button
-                                variant="ghost"
+                                variant="outline"
                                 size="icon"
-                                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                                className="h-8 w-8 text-sky-600 hover:text-sky-700 hover:bg-sky-50 border-sky-200 dark:text-sky-400 dark:hover:text-sky-300 dark:hover:bg-sky-900/30 dark:border-sky-800"
                                 onClick={(e) => {
                                   e.stopPropagation()
                                   handleViewDetail(r)

@@ -795,3 +795,40 @@ Stage Summary:
 - AdminASN table: No more text truncation, better header styling, tooltips for all truncated-capable fields
 - Both tables have proper column proportions matching content needs
 - VLM-verified: "The table UI is high-quality and well-designed"
+
+---
+Task ID: 12
+Agent: main
+Task: Fix action buttons not visible (perbaiki tampilan tombol action tidak terlihat)
+
+Work Log:
+- Analyzed user-uploaded screenshot showing Data ASN page
+- Identified root cause: all action buttons used `variant="ghost"` with `text-muted-foreground` which makes them nearly invisible on white/light backgrounds
+- Additional issue: AdminMasterData used `opacity-0 group-hover:opacity-100` which hid buttons completely on mobile/touch devices
+- Systematically fixed all 8 admin components:
+  1. **AdminASN.tsx**: Changed Edit, Password, Delete buttons from `variant="ghost"` to `variant="outline"` with proper color borders (slate for edit, violet for password, red for delete)
+  2. **AdminUsers.tsx**: Changed Toggle, Edit, Password, Delete buttons to `variant="outline"` with colored borders (amber/emerald for toggle, slate for edit, violet for password, red for delete)
+  3. **AdminForms.tsx**: Changed Edit, Duplicate, Toggle, Delete buttons to `variant="outline"` with colored borders (slate for edit, sky for duplicate, amber/emerald for toggle, red for delete)
+  4. **AdminMasterData.tsx**: Removed `opacity-0 group-hover:opacity-100` (buttons now always visible), changed to `variant="outline"` with slate for edit and red for delete
+  5. **AdminReports.tsx**: Changed View button to `variant="outline"` with sky color and border
+  6. **AdminResponses.tsx**: Changed View button to `variant="outline"` with sky color and border
+  7. **AdminAnnouncements.tsx**: Changed all 5 action buttons (Eye/Pin/Toggle/Edit/Delete) to `variant="outline"` with proper colored borders
+  8. **AdminStatusASN.tsx**: Changed Edit, Toggle, Delete buttons to `variant="outline"` with proper colored borders
+  9. **AdminBidang.tsx**: Changed Edit, Toggle, Delete buttons to `variant="outline"` with proper colored borders
+- Consistent color coding across all components:
+  - Edit/Pencil: `text-slate-600` with `border-slate-200` (dark mode support)
+  - View/Eye: `text-sky-600` with `border-sky-200`
+  - Password/KeyRound: `text-violet-600` with `border-violet-200`
+  - Duplicate/Copy: `text-sky-600` with `border-sky-200`
+  - Toggle: `text-amber-600`/`text-emerald-600` with matching borders
+  - Delete/Trash: `text-red-500` with `border-red-200`
+- All buttons now have visible outlines/borders and strong enough colors to be clearly visible
+- Lint passes (only pre-existing custom-server.js warnings)
+- Verified with agent-browser + VLM: action buttons are clearly visible on Data ASN, Data Master, and Users pages
+
+Stage Summary:
+- All action buttons across 8 admin components are now clearly visible with outline borders ✅
+- AdminMasterData buttons are always visible (no more hover-to-reveal) ✅
+- Consistent color coding across all components for easy identification ✅
+- Dark mode support included in all button styles ✅
+- No new lint errors ✅

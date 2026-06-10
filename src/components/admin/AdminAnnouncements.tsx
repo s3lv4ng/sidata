@@ -460,12 +460,12 @@ export default function AdminAnnouncements() {
                     {/* Actions */}
                     <div className="flex items-center gap-1 shrink-0 sm:ml-2">
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="icon"
                         className={`h-8 w-8 ${
                           announcement.isHidden
-                            ? 'text-violet-600 hover:text-violet-700 hover:bg-violet-50'
-                            : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                            ? 'text-violet-600 hover:text-violet-700 hover:bg-violet-50 border-violet-200 dark:text-violet-400 dark:hover:text-violet-300 dark:hover:bg-violet-900/30 dark:border-violet-800'
+                            : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50 border-slate-200 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800 dark:border-slate-700'
                         }`}
                         onClick={() => handleToggleHidden(announcement)}
                         title={announcement.isHidden ? 'Tampilkan di Beranda' : 'Sembunyikan dari Beranda'}
@@ -477,12 +477,12 @@ export default function AdminAnnouncements() {
                         )}
                       </Button>
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="icon"
                         className={`h-8 w-8 ${
                           announcement.isPinned
-                            ? 'text-amber-600 hover:text-amber-700 hover:bg-amber-50'
-                            : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                            ? 'text-amber-600 hover:text-amber-700 hover:bg-amber-50 border-amber-200 dark:text-amber-400 dark:hover:text-amber-300 dark:hover:bg-amber-900/30 dark:border-amber-800'
+                            : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50 border-slate-200 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800 dark:border-slate-700'
                         }`}
                         onClick={() => handleTogglePin(announcement)}
                         title={announcement.isPinned ? 'Lepas Pin' : 'Sematkan'}
@@ -494,12 +494,12 @@ export default function AdminAnnouncements() {
                         )}
                       </Button>
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="icon"
-                        className={`h-8 w-8 ${
+                        className={`h-8 w-8 border-amber-200 dark:border-amber-800 ${
                           announcement.isActive
-                            ? 'text-amber-600 hover:text-amber-700 hover:bg-amber-50'
-                            : 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50'
+                            ? 'text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:text-amber-300 dark:hover:bg-amber-900/30'
+                            : 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:text-emerald-300 dark:hover:bg-emerald-900/30 dark:border-emerald-800'
                         }`}
                         onClick={() => handleToggleActive(announcement)}
                         title={announcement.isActive ? 'Nonaktifkan' : 'Aktifkan'}
@@ -511,18 +511,18 @@ export default function AdminAnnouncements() {
                         )}
                       </Button>
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
+                        className="h-8 w-8 text-slate-600 hover:text-slate-800 hover:bg-slate-50 border-slate-200 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800 dark:border-slate-700"
                         onClick={() => handleOpenEdit(announcement)}
                         title="Edit"
                       >
                         <Pencil className="w-4 h-4" />
                       </Button>
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="icon"
-                        className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
+                        className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50 border-red-200 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/30 dark:border-red-800"
                         onClick={() => confirmDelete(announcement.id)}
                         title="Hapus"
                       >

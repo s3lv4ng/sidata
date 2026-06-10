@@ -416,21 +416,21 @@ export default function AdminBidang() {
                       <TableCell>
                         <div className="flex items-center justify-center gap-1">
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                            className="h-8 w-8 text-slate-600 hover:text-slate-800 hover:bg-slate-50 border-slate-200 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800 dark:border-slate-700"
                             onClick={() => handleOpenEdit(bidang)}
                             title="Edit Bidang"
                           >
                             <Pencil className="w-3.5 h-3.5" />
                           </Button>
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="icon"
-                            className={`h-8 w-8 ${
+                            className={`h-8 w-8 border-amber-200 dark:border-amber-800 ${
                               bidang.isActive
                                 ? 'text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:text-amber-300 dark:hover:bg-amber-900/30'
-                                : 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:text-emerald-300 dark:hover:bg-emerald-900/30'
+                                : 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:text-emerald-300 dark:hover:bg-emerald-900/30 dark:border-emerald-800'
                             }`}
                             onClick={() => handleToggleActive(bidang)}
                             title={bidang.isActive ? 'Nonaktifkan' : 'Aktifkan'}
@@ -442,9 +442,9 @@ export default function AdminBidang() {
                             )}
                           </Button>
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="icon"
-                            className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/30"
+                            className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50 border-red-200 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/30 dark:border-red-800"
                             onClick={() => {
                               setBidangToDelete(bidang)
                               setDeleteDialogOpen(true)

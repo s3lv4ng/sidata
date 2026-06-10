@@ -504,9 +504,9 @@ export default function AdminForms() {
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button
-                                    variant="ghost"
+                                    variant="outline"
                                     size="icon"
-                                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                                    className="h-8 w-8 text-slate-600 hover:text-slate-800 hover:bg-slate-50 border-slate-200 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800 dark:border-slate-700"
                                     onClick={() => handleEdit(form)}
                                   >
                                     <Pencil className="w-3.5 h-3.5" />
@@ -518,9 +518,9 @@ export default function AdminForms() {
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button
-                                    variant="ghost"
+                                    variant="outline"
                                     size="icon"
-                                    className="h-8 w-8 text-sky-600 hover:text-sky-700 hover:bg-sky-50 dark:text-sky-400 dark:hover:text-sky-300 dark:hover:bg-sky-900/30"
+                                    className="h-8 w-8 text-sky-600 hover:text-sky-700 hover:bg-sky-50 border-sky-200 dark:text-sky-400 dark:hover:text-sky-300 dark:hover:bg-sky-900/30 dark:border-sky-800"
                                     onClick={() => handleDuplicate(form)}
                                     disabled={duplicatingId === form.id}
                                   >
@@ -537,12 +537,12 @@ export default function AdminForms() {
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button
-                                    variant="ghost"
+                                    variant="outline"
                                     size="icon"
                                     className={`h-8 w-8 ${
                                       form.isActive
-                                        ? 'text-amber-600 hover:text-amber-700 hover:bg-amber-50'
-                                        : 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50'
+                                        ? 'text-amber-600 hover:text-amber-700 hover:bg-amber-50 border-amber-200 dark:text-amber-400 dark:hover:text-amber-300 dark:hover:bg-amber-900/30 dark:border-amber-800'
+                                        : 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:hover:text-emerald-300 dark:hover:bg-emerald-900/30 dark:border-emerald-800'
                                     }`}
                                     onClick={() => handleToggleActive(form)}
                                     disabled={togglingId === form.id}
@@ -564,9 +564,9 @@ export default function AdminForms() {
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button
-                                    variant="ghost"
+                                    variant="outline"
                                     size="icon"
-                                    className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
+                                    className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50 border-red-200 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/30 dark:border-red-800"
                                     onClick={() => {
                                       setFormToDelete(form)
                                       setDeleteDialogOpen(true)

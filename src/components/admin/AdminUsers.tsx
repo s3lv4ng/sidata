@@ -583,14 +583,14 @@ export default function AdminUsers() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center justify-center gap-0.5">
+                        <div className="flex items-center justify-center gap-1">
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="icon"
-                            className={`h-7 w-7 ${
+                            className={`h-8 w-8 border-amber-200 dark:border-amber-800 ${
                               user.isActive
-                                ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50'
-                                : 'text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50'
+                                ? 'text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:text-amber-300 dark:hover:bg-amber-900/30'
+                                : 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:text-emerald-300 dark:hover:bg-emerald-900/30 dark:border-emerald-800'
                             }`}
                             onClick={() => handleToggleActive(user)}
                             title={user.isActive ? 'Nonaktifkan' : 'Aktifkan'}
@@ -602,27 +602,27 @@ export default function AdminUsers() {
                             )}
                           </Button>
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted"
+                            className="h-8 w-8 text-slate-600 hover:text-slate-800 hover:bg-slate-50 border-slate-200 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800 dark:border-slate-700"
                             onClick={() => handleOpenEdit(user)}
                             title="Edit"
                           >
                             <Pencil className="w-3.5 h-3.5" />
                           </Button>
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="icon"
-                            className="h-7 w-7 text-sky-500 hover:text-sky-600 hover:bg-sky-50"
+                            className="h-8 w-8 text-violet-600 hover:text-violet-700 hover:bg-violet-50 border-violet-200 dark:text-violet-400 dark:hover:text-violet-300 dark:hover:bg-violet-900/30 dark:border-violet-800"
                             onClick={() => confirmResetPassword(user.id)}
                             title="Reset Password"
                           >
                             <KeyRound className="w-3.5 h-3.5" />
                           </Button>
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="icon"
-                            className="h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-50"
+                            className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50 border-red-200 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/30 dark:border-red-800"
                             onClick={() => confirmDelete(user.id)}
                             title="Hapus"
                           >
