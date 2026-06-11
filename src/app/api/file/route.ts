@@ -11,9 +11,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Path parameter required' }, { status: 400 })
     }
 
-    // Security: only allow files from the upload directory
-    const normalizedPath = path.normalize(filePath).replace(/^(\.\.[/\\])+/, '')
+    // Decode URI component in case the path is URL-encoded
+    let decodedPath = filePath
+    try {
+      decodedPath = decodeURIComponent(filePath)
+    } catch {
+      // If decoding fails, use the original path
+    }
+
+    // Security: normalize and validate the path
+    const normalizedPath = path.normalize(decodedPath).replace(/^(\.\.[/\\])+/, '')
+
+    // Only allow files from the upload directory
     if (!normalizedPath.startsWith('/upload/') && !normalizedPath.startsWith('upload/')) {
+      console.warn(`[File API] Rejected invalid path: ${normalizedPath}`)
       return NextResponse.json({ error: 'Invalid path' }, { status: 403 })
     }
 
@@ -53,14 +64,19 @@ export async function GET(request: NextRequest) {
       ? `attachment; filename="${path.basename(fullPath)}"`
       : `inline; filename="${path.basename(fullPath)}"`
 
+    // For images, set longer cache and add CORS headers
+    const isImage = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.ico'].includes(ext)
+
     return new NextResponse(fileBuffer, {
       headers: {
         'Content-Type': contentType,
         'Content-Disposition': disposition,
-        'Cache-Control': 'public, max-age=86400',
+        'Cache-Control': isImage ? 'public, max-age=86400, immutable' : 'public, max-age=86400',
+        ...(isImage ? { 'Access-Control-Allow-Origin': '*' } : {}),
       },
     })
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error('[File API] Error serving file:', error)
+    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
   }
 }

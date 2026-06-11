@@ -1,10 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { invalidateSettingsCache } from '@/lib/auth'
-import { saveUploadedFile } from '@/lib/upload-utils'
+import { saveUploadedFile, resolveFilePath } from '@/lib/upload-utils'
 
 const MAX_LOGO_SIZE = 2 * 1024 * 1024 // 2MB for logos
 const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/webp', 'image/x-icon', 'image/vnd.microsoft.icon']
+
+// Delete old brand file from disk
+async function deleteOldBrandFile(settingKey: string) {
+  try {
+    const existing = await db.systemSetting.findUnique({ where: { key: settingKey } })
+    if (existing?.value) {
+      // Try to resolve the file path from the stored access path
+      const accessPath = existing.value
+      // Extract the path parameter from /api/file?path=xxx format
+      const pathMatch = accessPath.match(/[?&]path=([^&]+)/)
+      if (pathMatch) {
+        const filePath = decodeURIComponent(pathMatch[1])
+        const resolved = await resolveFilePath(filePath)
+        if (resolved) {
+          const { unlink } = await import('fs/promises')
+          await unlink(resolved)
+          console.log(`[Upload Logo] Deleted old file: ${resolved}`)
+        }
+      }
+    }
+  } catch (err) {
+    // Silently ignore errors - old file might not exist
+    console.log('[Upload Logo] Could not delete old file:', err)
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -59,9 +84,21 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(bytes)
     const { accessPath } = await saveUploadedFile(buffer, filename, 'brand')
 
-    // Store path in settings
-    const settingKey = type === 'logo' ? 'appLogo' : 'appFavicon'
+    // Verify the saved file is accessible
+    const pathMatch = accessPath.match(/[?&]path=([^&]+)/)
+    if (pathMatch) {
+      const filePath = decodeURIComponent(pathMatch[1])
+      const resolved = await resolveFilePath(filePath)
+      if (!resolved) {
+        console.error('[Upload Logo] Warning: File saved but could not be resolved:', filePath)
+      }
+    }
 
+    // Delete old brand file
+    const settingKey = type === 'logo' ? 'appLogo' : 'appFavicon'
+    await deleteOldBrandFile(settingKey)
+
+    // Store path in settings
     await db.systemSetting.upsert({
       where: { key: settingKey },
       update: { value: accessPath },

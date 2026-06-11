@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useAppStore } from '@/stores/app-store'
+import { refreshBranding } from '@/hooks/use-app-branding'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -329,6 +330,12 @@ export default function AdminSettings() {
         if (driveSettingsConfig.some((c) => c.key === key)) {
           checkDriveStatus()
         }
+
+        // Refresh branding cache for any branding-related setting
+        const brandingKeys = ['appName', 'appShortName', 'instansiName', 'daerah', 'instansiEmail', 'instansiPhone', 'instansiAddress', 'appLogo', 'appFavicon']
+        if (brandingKeys.includes(key)) {
+          refreshBranding()
+        }
       } else {
         addNotification('Gagal menyimpan pengaturan', 'error')
       }
@@ -379,6 +386,12 @@ export default function AdminSettings() {
         // If we saved Drive settings, recheck connection
         if (configList === driveSettingsConfig) {
           checkDriveStatus()
+        }
+
+        // Refresh branding cache if any branding settings were changed
+        const brandingKeys = ['appName', 'appShortName', 'instansiName', 'daerah', 'instansiEmail', 'instansiPhone', 'instansiAddress', 'appLogo', 'appFavicon']
+        if (Object.keys(changedSettings).some((k) => brandingKeys.includes(k))) {
+          refreshBranding()
         }
       } else {
         addNotification('Gagal menyimpan pengaturan', 'error')
@@ -590,6 +603,8 @@ export default function AdminSettings() {
                               setSettings((prev) => ({ ...prev, appLogo: data.filePath }))
                               setOriginalSettings((prev) => ({ ...prev, appLogo: data.filePath }))
                               addNotification('Logo berhasil diunggah', 'success')
+                              // Refresh branding cache so sidebar/login page show new logo
+                              refreshBranding()
                             } else {
                               const data = await res.json()
                               addNotification(data.error || 'Gagal mengunggah logo', 'error')
@@ -624,6 +639,7 @@ export default function AdminSettings() {
                             })
                             setOriginalSettings((prev) => ({ ...prev, appLogo: '' }))
                             addNotification('Logo dihapus, menggunakan logo default', 'info')
+                            refreshBranding()
                           }}
                         >
                           <X className="w-3 h-3" />
@@ -682,6 +698,8 @@ export default function AdminSettings() {
                               setSettings((prev) => ({ ...prev, appFavicon: data.filePath }))
                               setOriginalSettings((prev) => ({ ...prev, appFavicon: data.filePath }))
                               addNotification('Favicon berhasil diunggah', 'success')
+                              // Refresh branding cache so favicon updates
+                              refreshBranding()
                             } else {
                               const data = await res.json()
                               addNotification(data.error || 'Gagal mengunggah favicon', 'error')
@@ -716,6 +734,7 @@ export default function AdminSettings() {
                             })
                             setOriginalSettings((prev) => ({ ...prev, appFavicon: '' }))
                             addNotification('Favicon dihapus, menggunakan default', 'info')
+                            refreshBranding()
                           }}
                         >
                           <X className="w-3 h-3" />

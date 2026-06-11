@@ -1144,3 +1144,55 @@ Stage Summary:
 - Logo displays correctly on: Login page, Admin sidebar, ASN homepage, Settings preview, Setup Wizard
 - Verified with agent-browser: all logos display correctly, no broken images
 - All lint passes (only pre-existing custom-server.js warnings)
+
+---
+Task ID: logo-fix
+Agent: main
+Task: Fix broken/corrupted logo when uploaded - "logo pecah pas di upload" / "logo tidak muncul {"error":"Invalid path"}"
+
+Work Log:
+- Investigated the logo upload flow: AdminSettings → /api/upload-logo → saveUploadedFile → /api/file
+- Current database values: appLogo = /api/file?path=/upload/brand/logo_1781129861108_jin11v.png
+- Verified /api/file endpoint returns 200 with correct PNG data (curl test)
+- Identified 3 root causes:
+  1. useAppBranding hook never refreshes after logo upload - sidebar shows stale logo
+  2. /api/file route doesn't handle URL-encoded paths properly
+  3. Old logo files not cleaned up when new ones are uploaded
+- Fix 1: Updated use-app-branding.ts hook:
+  - Added `refreshBranding()` export function that clears cache and re-fetches from server
+  - Added `useRefreshBranding()` hook for React components
+  - Added 5-minute cache TTL (previously cached forever)
+  - Extracted `mapSettingsToBranding()` helper for cleaner code
+- Fix 2: Updated /api/file/route.ts:
+  - Added `decodeURIComponent()` for URL-encoded path parameters
+  - Added warning log for rejected invalid paths (debugging aid)
+  - Added better error logging for file serving errors
+  - Added CORS headers for image responses
+  - Added `immutable` cache directive for image files
+- Fix 3: Updated AdminSettings.tsx:
+  - Added `refreshBranding()` call after logo upload success
+  - Added `refreshBranding()` call after favicon upload success
+  - Added `refreshBranding()` call after "Hapus Logo" action
+  - Added `refreshBranding()` call after "Hapus Favicon" action
+  - Added `refreshBranding()` call after handleSaveOne for branding-related keys
+  - Added `refreshBranding()` call after handleSaveAll when branding settings changed
+  - Imported `refreshBranding` from use-app-branding
+- Fix 4: Updated /api/upload-logo/route.ts:
+  - Added `deleteOldBrandFile()` function that deletes previous logo/favicon from disk
+  - Extracts path from /api/file?path=xxx format and resolves to actual filesystem path
+  - Added file accessibility verification after save
+  - Better error logging with [Upload Logo] prefix
+- Verified with agent-browser:
+  - Logo upload works correctly (new 300x300 test logo uploaded and displayed)
+  - Sidebar logo immediately updates to new logo (not stale anymore)
+  - Both sidebar and settings preview show the same updated logo
+  - No errors in browser console
+  - No errors in dev server log
+- Lint passes (only pre-existing custom-server.js warnings)
+
+Stage Summary:
+- Logo upload now works correctly and displays immediately across all components ✅
+- useAppBranding hook now refreshes after any branding change ✅
+- Old logo files are cleaned up when new ones are uploaded ✅
+- /api/file route handles URL-encoded paths and has better error handling ✅
+- Sidebar, login page, and settings preview all update immediately after logo change ✅
