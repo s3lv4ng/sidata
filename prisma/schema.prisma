@@ -126,6 +126,8 @@ model Bidang {
   driveFolderLink String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+  description String?
+  isActive    Boolean @default(true)
 }
 
 model StatusASN {
@@ -133,4 +135,6 @@ model StatusASN {
   name      String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  description String?
+  isActive    Boolean @default(true)
 }
