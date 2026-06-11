@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { saveUploadedFile } from '@/lib/upload-utils'
-import { uploadToBidangFolder, isDriveConfigured } from '@/lib/google-drive'
+import { uploadToBidangFolder, isDriveConfigured, isOAuthDriveConfigured } from '@/lib/google-drive'
 import { db } from '@/lib/db'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
@@ -69,31 +69,43 @@ export async function POST(request: NextRequest) {
     const { accessPath } = await saveUploadedFile(buffer, uniqueFilename, subdir)
 
     // Attempt Google Drive upload (non-blocking)
+    // Check both OAuth2 (My Drive) and Service Account configurations
     let driveFileId: string | null = null
     let driveLink: string | null = null
     let driveUploaded = false
 
     try {
       const driveConfigured = await isDriveConfigured()
-      if (driveConfigured && bidang) {
-        const driveResult = await uploadToBidangFolder(buffer, uniqueFilename, file.type, bidang)
-        if (driveResult) {
-          driveFileId = driveResult.fileId
-          driveLink = driveResult.webViewLink
-          driveUploaded = true
+      const oauthConfigured = await isOAuthDriveConfigured()
+      const anyDriveAvailable = driveConfigured || oauthConfigured
+
+      if (anyDriveAvailable) {
+        if (bidang) {
+          const driveResult = await uploadToBidangFolder(buffer, uniqueFilename, file.type, bidang)
+          if (driveResult) {
+            driveFileId = driveResult.fileId
+            driveLink = driveResult.webViewLink
+            driveUploaded = true
+          }
+        } else {
+          // No bidang, upload to main folder
+          const { uploadToDrive } = await import('@/lib/google-drive')
+          const driveResult = await uploadToDrive(buffer, uniqueFilename, file.type)
+          if (driveResult) {
+            driveFileId = driveResult.fileId
+            driveLink = driveResult.webViewLink
+            driveUploaded = true
+          }
         }
-      } else if (driveConfigured) {
-        // No bidang, upload to main folder
-        const { uploadToDrive } = await import('@/lib/google-drive')
-        const driveResult = await uploadToDrive(buffer, uniqueFilename, file.type)
-        if (driveResult) {
-          driveFileId = driveResult.fileId
-          driveLink = driveResult.webViewLink
-          driveUploaded = true
-        }
+      } else {
+        console.log('Google Drive not configured (neither OAuth2 nor Service Account). Skipping Drive upload.')
       }
     } catch (driveError: any) {
       console.warn('Google Drive upload failed (non-blocking):', driveError?.message || driveError)
+      // Provide more specific error info
+      if (driveError?.code === 403 || driveError?.message?.includes('forbidden') || driveError?.message?.includes('delegation')) {
+        console.warn('Hint: If using Service Account with Gmail account, domain-wide delegation is not supported. Use OAuth2 flow instead.')
+      }
       // Don't fail the whole upload if Drive fails
     }
 

@@ -124,10 +124,12 @@ model SystemSetting {
 }
 
 model Bidang {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String   @id @default(cuid())
+  name            String   @unique
+  driveFolderId   String?  // Google Drive folder ID for this bidang
+  driveFolderLink String?  // Google Drive folder link for this bidang
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model StatusASN {

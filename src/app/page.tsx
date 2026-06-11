@@ -24,7 +24,7 @@ import HelpFAQ from '@/components/shared/HelpFAQ'
 
 function AppContent() {
   const { data: session, status } = useSession()
-  const { currentView, setCurrentView } = useAppStore()
+  const { currentView, setCurrentView, addNotification } = useAppStore()
   // Wait for initial setup check before rendering any view
   const [initDone, setInitDone] = useState(false)
 
@@ -38,11 +38,13 @@ function AppContent() {
     if (driveOAuthSuccess) {
       // Clean URL
       window.history.replaceState({}, '', '/')
-      // The success will be reflected in the settings page automatically
+      // Show success notification
+      addNotification('Akun Google Drive berhasil dihubungkan! Upload file ASN akan otomatis tersimpan ke Google Drive.', 'success')
     }
     if (driveOAuthError) {
       console.error('Drive OAuth error:', driveOAuthError)
       window.history.replaceState({}, '', '/')
+      addNotification('Gagal menghubungkan Google Drive: ' + driveOAuthError, 'error')
     }
   }, [])
 

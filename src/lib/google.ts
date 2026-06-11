@@ -351,15 +351,16 @@ async function shareFileWithUser(drive: any, fileId: string, userEmail: string) 
 /**
  * Get an OAuth2-authenticated Drive client using the stored refresh token.
  * This is used for uploading files to My Drive (Service Account can't upload to My Drive).
+ * Uses the system-wide OAuth2 refresh token stored in SystemSetting.
  */
 export async function getOAuthDriveClient(): Promise<{
   drive: any
   auth: any
 } | null> {
-  // Get Google OAuth credentials from settings
+  // Get Google OAuth credentials and refresh token from settings
   const settings = await db.systemSetting.findMany({
     where: {
-      key: { in: ['googleLoginClientId', 'googleLoginClientSecret'] },
+      key: { in: ['googleLoginClientId', 'googleLoginClientSecret', 'googleDriveRefreshToken'] },
     },
   })
   const settingsMap: Record<string, string> = {}
@@ -367,21 +368,9 @@ export async function getOAuthDriveClient(): Promise<{
 
   const clientId = settingsMap.googleLoginClientId || ''
   const clientSecret = settingsMap.googleLoginClientSecret || ''
+  const refreshToken = settingsMap.googleDriveRefreshToken || ''
 
-  if (!clientId || !clientSecret || clientSecret.startsWith('****')) {
-    return null
-  }
-
-  // Find a user with a stored Google refresh token
-  const userWithToken = await db.user.findFirst({
-    where: {
-      googleRefreshToken: { not: null },
-      email: { not: null },
-    },
-    select: { id: true, email: true, googleRefreshToken: true },
-  })
-
-  if (!userWithToken?.googleRefreshToken) {
+  if (!clientId || !clientSecret || !refreshToken) {
     return null
   }
 
@@ -392,7 +381,7 @@ export async function getOAuthDriveClient(): Promise<{
   )
 
   oauth2Client.setCredentials({
-    refresh_token: userWithToken.googleRefreshToken,
+    refresh_token: refreshToken,
   })
 
   // Refresh the access token
@@ -400,11 +389,6 @@ export async function getOAuthDriveClient(): Promise<{
     await oauth2Client.getAccessToken()
   } catch (err: any) {
     console.error('[Google Drive OAuth] Failed to refresh access token:', err.message)
-    // Token might be revoked - clear it
-    await db.user.update({
-      where: { id: userWithToken.id },
-      data: { googleRefreshToken: null },
-    })
     return null
   }
 

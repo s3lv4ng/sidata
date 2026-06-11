@@ -1262,25 +1262,70 @@ export default function AdminSettings() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* OAuth2 Drive Access - for My Drive uploads */}
-              <div className="rounded-lg border border-blue-200 bg-blue-50/30 p-4 dark:border-blue-800 dark:bg-blue-900/10">
+              {/* OAuth2 Drive Access - for My Drive uploads (RECOMMENDED) */}
+              <div className="rounded-lg border-2 border-blue-300 bg-blue-50/30 p-4 dark:border-blue-700 dark:bg-blue-900/10">
                 <div className="flex items-center gap-2 mb-3">
                   <User className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                  <h4 className="text-sm font-semibold text-blue-700 dark:text-blue-300">Akses Drive via Akun Google (OAuth2)</h4>
+                  <h4 className="text-sm font-semibold text-blue-700 dark:text-blue-300">Akses Drive via Akun Google (OAuth2) — Direkomendasikan</h4>
                   {settings.googleDriveRefreshToken ? (
                     <Badge variant="outline" className="text-[9px] bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800 ml-auto">
-                      Terhubung
+                      Terhubung ✓
                     </Badge>
                   ) : (
-                    <Badge variant="outline" className="text-[9px] bg-gray-50 text-gray-500 border-gray-200 dark:bg-gray-900/20 dark:text-gray-400 dark:border-gray-800 ml-auto">
+                    <Badge variant="outline" className="text-[9px] bg-red-50 text-red-500 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800 ml-auto">
                       Belum Terhubung
                     </Badge>
                   )}
                 </div>
                 <p className="text-xs text-blue-600/80 dark:text-blue-400/80 mb-3">
                   Hubungkan akun Google Drive Anda untuk mengunggah file langsung ke Drive pribadi (My Drive). 
-                  Upload akan menggunakan kuota penyimpanan akun Google Anda, bukan Service Account.
+                  Upload akan menggunakan kuota penyimpanan akun Google Anda. <strong>Wajib jika menggunakan akun Gmail (bukan Google Workspace).</strong>
                 </p>
+
+                {/* Gmail delegation warning */}
+                {settings.googleDriveDelegateEmail && settings.googleDriveDelegateEmail.includes('@gmail.com') && !settings.googleDriveRefreshToken && (
+                  <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50/50 p-2.5 mb-3 dark:border-red-800 dark:bg-red-900/10">
+                    <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+                    <div className="text-xs text-red-700 dark:text-red-300">
+                      <p className="font-medium">Email Delegasi Gmail Tidak Didukung!</p>
+                      <p className="mt-1">Domain-wide delegation TIDAK berfungsi dengan akun Gmail (<code className="bg-red-100 dark:bg-red-900/50 px-1 rounded">{settings.googleDriveDelegateEmail}</code>). Anda wajib menggunakan OAuth2 di bawah ini untuk menghubungkan akun Google Drive Anda.</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step-by-step instructions for first-time setup */}
+                {!settings.googleDriveRefreshToken && settings.googleLoginClientId && settings.googleLoginClientSecret && (
+                  <div className="rounded-lg border border-blue-200 bg-white/50 p-3 mb-3 dark:border-blue-800 dark:bg-gray-900/30">
+                    <p className="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-2">Langkah-langkah menghubungkan Google Drive:</p>
+                    <ol className="list-decimal list-inside space-y-1.5 text-xs text-blue-600/90 dark:text-blue-400/90">
+                      <li>
+                        Pastikan <strong>Redirect URI</strong> berikut sudah ditambahkan di Google Cloud Console → Credentials → OAuth Client → Authorized redirect URIs:
+                        <div className="flex items-center gap-2 mt-1 ml-4">
+                          <code className="text-[11px] bg-white dark:bg-gray-900 px-2 py-1 rounded border border-blue-200 dark:border-blue-800 break-all flex-1 select-all text-blue-800 dark:text-blue-200">
+                            {typeof window !== 'undefined' ? window.location.origin : ''}/api/drive/oauth
+                          </code>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 shrink-0"
+                            onClick={() => {
+                              const uri = `${window.location.origin}/api/drive/oauth`
+                              navigator.clipboard.writeText(uri)
+                              addNotification('Redirect URI Drive disalin!', 'success')
+                            }}
+                          >
+                            <Copy className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </li>
+                      <li>Klik tombol <strong>"Hubungkan Akun Google Drive"</strong> di bawah</li>
+                      <li>Login dengan akun Google yang memiliki folder target ({settings.googleDriveDelegateEmail || 'akun Google Anda'})</li>
+                      <li>Izinkan akses ke Google Drive saat diminta</li>
+                      <li>Setelah berhasil, upload file ASN akan otomatis tersimpan ke Google Drive Anda</li>
+                    </ol>
+                  </div>
+                )}
+
                 {settings.googleDriveRefreshToken ? (
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50/50 p-2.5 dark:border-emerald-800 dark:bg-emerald-900/10">

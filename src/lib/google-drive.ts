@@ -198,23 +198,52 @@ function createDriveClient(config: DriveConfig) {
 
 // Get the best available Drive client for uploads
 // Prefers OAuth2 (user's Drive) over Service Account
+// For My Drive: OAuth2 is required (SA has no storage quota for My Drive)
+// For Shared Drive: SA works directly
 async function getUploadDriveClient(): Promise<{ drive: any; folderId: string; authType: 'oauth2' | 'service_account' } | null> {
   // Try OAuth2 first (for My Drive - user has storage quota)
   const oauthConfig = await getOAuthDriveConfig()
   if (oauthConfig) {
     try {
       const drive = createOAuthDriveClient(oauthConfig)
-      return { drive, folderId: oauthConfig.folderId, authType: 'oauth2' }
+      // Test the client with a lightweight call to verify the token is still valid
+      try {
+        await drive.files.get({ fileId: oauthConfig.folderId, fields: 'id', supportsAllDrives: true })
+        console.log('Google Drive: Using OAuth2 client (My Drive)')
+        return { drive, folderId: oauthConfig.folderId, authType: 'oauth2' }
+      } catch (testError: any) {
+        // If the refresh token is invalid/expired, log and fall through
+        console.warn('OAuth2 Drive token validation failed:', testError?.message || testError)
+        // Don't fall through to SA - the user explicitly wants My Drive (OAuth2)
+        // Return null and let the caller know OAuth2 is misconfigured
+        if (testError?.message?.includes('invalid_grant') || testError?.message?.includes('Token has been expired')) {
+          console.error('OAuth2 refresh token is expired or revoked. Admin needs to re-connect Google Drive account.')
+        }
+        return null
+      }
     } catch (error) {
-      console.warn('OAuth2 Drive client failed, falling back to Service Account:', error)
+      console.warn('OAuth2 Drive client creation failed:', error)
     }
   }
 
-  // Fall back to Service Account
+  // Fall back to Service Account (works for Shared Drives, NOT for My Drive with Gmail)
   const config = await getDriveConfig()
   if (config) {
     try {
       const drive = createDriveClient(config)
+
+      // Check if delegate email is a Gmail address (domain-wide delegation won't work)
+      if (config.delegateEmail && config.delegateEmail.includes('@gmail.com')) {
+        console.warn(
+          `Google Drive: Service Account delegation to Gmail (${config.delegateEmail}) is NOT supported. ` +
+          `Domain-wide delegation only works with Google Workspace accounts. ` +
+          `Please connect your Google Drive via OAuth2 (Hubungkan Akun Google Drive) in Admin Settings.`
+        )
+        // Still try it - it might work if the SA was granted access to a shared folder
+        // But don't expect it to work for My Drive
+      }
+
+      console.log('Google Drive: Using Service Account client' + (config.delegateEmail ? ` (delegating to ${config.delegateEmail})` : ''))
       return { drive, folderId: config.folderId, authType: 'service_account' }
     } catch (error) {
       console.error('Service Account Drive client failed:', error)
@@ -578,6 +607,10 @@ export async function testDriveConnection(): Promise<{
         // Folder is in My Drive and no delegation configured
         canUpload = false
         uploadWarning = 'Folder ini berada di "My Drive" (Drive Pribadi), bukan Shared Drive. Upload file oleh Service Account akan gagal karena tidak memiliki kuota penyimpanan. Solusi: Hubungkan akun Google Drive Anda di bagian "Akses Drive (OAuth2)" di atas.'
+      } else if (config!.delegateEmail && config!.delegateEmail.includes('@gmail.com')) {
+        // Gmail delegation - NOT supported
+        canUpload = false
+        uploadWarning = `Domain-wide delegation ke akun Gmail (${config!.delegateEmail}) TIDAK didukung. Service Account tidak dapat mengimpersonasi akun Gmail. Solusi: Hubungkan akun Google Drive Anda melalui OAuth2 di bagian "Akses Drive via Akun Google (OAuth2)" di atas.`
       }
 
       return {
@@ -625,8 +658,8 @@ export function generateDriveOAuthUrl(clientId: string, redirectUri: string): st
   const url = oauth2Client.generateAuthUrl({
     access_type: 'offline',
     scope: [
+      'https://www.googleapis.com/auth/drive',
       'https://www.googleapis.com/auth/drive.file',
-      'https://www.googleapis.com/auth/drive.readonly',
     ],
     prompt: 'consent', // Force consent to get refresh token
     include_granted_scopes: true,

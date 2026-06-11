@@ -1038,4 +1038,35 @@ Stage Summary:
   4. After that, all file uploads will go to My Drive using the user's quota
 - Lint passes (only pre-existing custom-server.js warnings)
 - No runtime errors
+
+---
+Task ID: 7
+Agent: Main Agent
+Task: Fix Google Drive upload to use My Drive (not Shared Drive) for bkad.seruyankab@gmail.com
+
+Work Log:
+- Diagnosed that Service Account + domain-wide delegation does NOT work with Gmail accounts
+- The delegate email bkad.seruyankab@gmail.com is a Gmail address, so SA delegation fails
+- Fixed upload route to check both OAuth2 and SA Drive configurations
+- Improved getUploadDriveClient() with better error handling and Gmail delegation detection
+- Added Gmail delegation warning in testDriveConnection() function
+- Fixed google.ts getOAuthDriveClient() to use SystemSetting (not User.googleRefreshToken which doesn't exist)
+- Updated AdminSettings OAuth2 section: more prominent with "Direkomendasikan" label, red "Belum Terhubung" badge
+- Added Gmail delegation warning (red box) in Drive tab when delegate email is @gmail.com
+- Added step-by-step OAuth2 setup instructions with copyable redirect URI
+- Changed OAuth2 scopes from drive.file+drive.readonly to drive+drive.file for full folder creation support
+- Added Bidang.driveFolderId and driveFolderLink fields to Prisma schema
+- Pushed schema changes to database
+- Added OAuth2 callback success/error toast notifications in page.tsx
+- Verified all changes with agent-browser - Drive UI shows correct warnings and status
+
+Stage Summary:
+- Key fix: Upload route now checks isOAuthDriveConfigured() in addition to isDriveConfigured()
+- Gmail delegation warning prominently displayed in admin UI (red box)
+- OAuth2 section is now the most prominent element on Drive tab
+- Step-by-step instructions guide admin through OAuth2 setup
+- google.ts no longer references non-existent User.googleRefreshToken field
+- Bidang model now has driveFolderId and driveFolderLink fields for folder caching
+- Admin needs to: (1) Add redirect URI to Google Cloud Console, (2) Click "Hubungkan Akun Google Drive", (3) Authorize with bkad.seruyankab@gmail.com
+- After OAuth2 connection, all ASN file uploads will go to My Drive using the user's storage quota
 - Verified with agent-browser: OAuth2 section visible, "Hubungkan Akun Google Drive" button present
