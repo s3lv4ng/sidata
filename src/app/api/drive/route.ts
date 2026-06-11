@@ -13,6 +13,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ folders })
     }
 
+    // List ASN subfolders within a bidang folder
+    if (action === 'list-asn-folders') {
+      const bidangFolderId = searchParams.get('bidangFolderId')
+      if (!bidangFolderId) {
+        return NextResponse.json({ error: 'bidangFolderId diperlukan' }, { status: 400 })
+      }
+      const { listAsnFolders } = await import('@/lib/google-drive')
+      const folders = await listAsnFolders(bidangFolderId)
+      return NextResponse.json({ folders })
+    }
+
     const { testDriveConnection } = await import('@/lib/google-drive')
     const result = await testDriveConnection()
 

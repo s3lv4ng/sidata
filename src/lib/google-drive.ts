@@ -330,6 +330,11 @@ export async function uploadToDrive(
 const bidangFolderCache: Record<string, { folderId: string; cachedAt: number }> = {}
 const BIDANG_CACHE_TTL = 30 * 60 * 1000 // 30 minutes
 
+// In-memory cache for ASN folder IDs to avoid repeated lookups
+// Key format: "bidangFolderId|asnName"
+const asnFolderCache: Record<string, { folderId: string; cachedAt: number }> = {}
+const ASN_CACHE_TTL = 30 * 60 * 1000 // 30 minutes
+
 // Find or create a subfolder for a specific Bidang in the parent Drive folder
 // Each bidang gets its own folder (e.g., "Aset", "Keuangan", etc.)
 export async function findOrCreateBidangFolder(bidangName: string): Promise<string | null> {
@@ -415,23 +420,127 @@ export async function findOrCreateBidangFolder(bidangName: string): Promise<stri
   }
 }
 
-// Upload a file to a bidang-specific folder in Google Drive
-// Automatically creates the bidang folder if it doesn't exist
+// Find or create a subfolder for a specific ASN inside a Bidang folder
+// Each ASN gets their own folder named after them (e.g., "John Doe")
+// If the folder already exists, reuse it
+export async function findOrCreateAsnFolder(
+  bidangFolderId: string,
+  asnName: string
+): Promise<string | null> {
+  try {
+    const clientInfo = await getUploadDriveClient()
+    if (!clientInfo) {
+      console.log('No Drive client available for ASN folder creation')
+      return null
+    }
+
+    const { drive, authType } = clientInfo
+    const isSharedDrive = authType === 'service_account'
+
+    // Check cache first
+    const cacheKey = `${bidangFolderId}|${asnName}`
+    const cached = asnFolderCache[cacheKey]
+    if (cached && Date.now() - cached.cachedAt < ASN_CACHE_TTL) {
+      return cached.folderId
+    }
+
+    // Sanitize ASN name for folder name
+    const sanitizedAsnName = asnName.trim().replace(/[<>:"/\\|?*]/g, '_')
+    if (!sanitizedAsnName) return null
+
+    // Search for existing folder with this ASN name in the bidang folder
+    const searchResponse = await drive.files.list({
+      q: `'${bidangFolderId}' in parents and name = '${sanitizedAsnName}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+      fields: 'files(id, name)',
+      includeItemsFromAllDrives: isSharedDrive,
+      supportsAllDrives: isSharedDrive,
+      corpora: isSharedDrive ? 'allDrives' : 'user',
+      pageSize: 1,
+    })
+
+    if (searchResponse.data.files && searchResponse.data.files.length > 0) {
+      const existingFolderId = searchResponse.data.files[0].id!
+      // Cache the result
+      asnFolderCache[cacheKey] = { folderId: existingFolderId, cachedAt: Date.now() }
+      console.log(`Found existing Drive folder for ASN "${sanitizedAsnName}" in bidang folder: ${existingFolderId}`)
+      return existingFolderId
+    }
+
+    // Folder doesn't exist, create it
+    console.log(`Creating new Drive folder for ASN "${sanitizedAsnName}" in bidang folder...`)
+    const createResponse = await drive.files.create({
+      requestBody: {
+        name: sanitizedAsnName,
+        mimeType: 'application/vnd.google-apps.folder',
+        parents: [bidangFolderId],
+      },
+      fields: 'id, name, webViewLink',
+      supportsAllDrives: isSharedDrive,
+    })
+
+    const newFolderId = createResponse.data.id
+    if (!newFolderId) {
+      console.error('Failed to create ASN folder: no ID returned')
+      return null
+    }
+
+    console.log(`Created Drive folder for ASN "${sanitizedAsnName}": ${newFolderId}`)
+
+    // Make the folder accessible (anyone with link can view)
+    try {
+      await drive.permissions.create({
+        fileId: newFolderId,
+        requestBody: {
+          role: 'reader',
+          type: 'anyone',
+        },
+        supportsAllDrives: isSharedDrive,
+      })
+    } catch (permError: any) {
+      console.warn('Could not set public permission on ASN folder:', permError?.message)
+    }
+
+    // Cache the result
+    asnFolderCache[cacheKey] = { folderId: newFolderId, cachedAt: Date.now() }
+
+    return newFolderId
+  } catch (error: any) {
+    console.error(`Error finding/creating ASN folder "${asnName}":`, error?.message || error)
+    return null
+  }
+}
+
+// Upload a file to an ASN-specific folder within a bidang folder in Google Drive
+// Automatically creates the bidang folder and ASN subfolder if they don't exist
+// Folder structure: Root Folder → Bidang Folder → ASN Name Folder → File
 export async function uploadToBidangFolder(
   fileBuffer: Buffer,
   fileName: string,
   mimeType: string,
-  bidangName: string
+  bidangName: string,
+  asnName?: string
 ): Promise<{ fileId: string; webViewLink: string; folderId: string } | null> {
   try {
     // Find or create the bidang folder
     const bidangFolderId = await findOrCreateBidangFolder(bidangName)
-    
+
     if (bidangFolderId) {
-      // Upload to the bidang-specific folder
-      const result = await uploadToDrive(fileBuffer, fileName, mimeType, bidangFolderId)
+      // If ASN name is provided, find or create the ASN subfolder within the bidang folder
+      let targetFolderId = bidangFolderId
+
+      if (asnName) {
+        const asnFolderId = await findOrCreateAsnFolder(bidangFolderId, asnName)
+        if (asnFolderId) {
+          targetFolderId = asnFolderId
+        } else {
+          console.warn(`Could not create/find ASN folder for "${asnName}", uploading directly to bidang folder`)
+        }
+      }
+
+      // Upload to the target folder (ASN subfolder or bidang folder)
+      const result = await uploadToDrive(fileBuffer, fileName, mimeType, targetFolderId)
       if (result) {
-        return { ...result, folderId: bidangFolderId }
+        return { ...result, folderId: targetFolderId }
       }
     }
 
@@ -472,6 +581,35 @@ export async function listBidangFolders(): Promise<Array<{ id: string; name: str
     }))
   } catch (error: any) {
     console.error('Error listing bidang folders:', error?.message || error)
+    return []
+  }
+}
+
+// List all ASN subfolders within a specific bidang folder
+export async function listAsnFolders(bidangFolderId: string): Promise<Array<{ id: string; name: string; webViewLink?: string }>> {
+  try {
+    const clientInfo = await getUploadDriveClient()
+    if (!clientInfo) return []
+
+    const { drive, authType } = clientInfo
+    const isSharedDrive = authType === 'service_account'
+
+    const response = await drive.files.list({
+      q: `'${bidangFolderId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+      fields: 'files(id, name, webViewLink)',
+      includeItemsFromAllDrives: isSharedDrive,
+      supportsAllDrives: isSharedDrive,
+      corpora: isSharedDrive ? 'allDrives' : 'user',
+      pageSize: 100,
+    })
+
+    return (response.data.files || []).map((f) => ({
+      id: f.id || '',
+      name: f.name || '',
+      webViewLink: f.webViewLink || undefined,
+    }))
+  } catch (error: any) {
+    console.error('Error listing ASN folders:', error?.message || error)
     return []
   }
 }

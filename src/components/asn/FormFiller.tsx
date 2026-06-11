@@ -97,6 +97,7 @@ export default function FormFiller() {
   const [ratingValues, setRatingValues] = useState<Record<string, number>>({})
 
   const userId = (session?.user as any)?.id || ''
+  const userName = session?.user?.name || ''
 
   const fetchFormData = useCallback(async () => {
     if (!selectedFormId) return
@@ -175,6 +176,7 @@ export default function FormFiller() {
       formData.append('file', file)
       if (userBidang) formData.append('bidang', userBidang)
       if (userId) formData.append('userId', userId)
+      if (userName) formData.append('userName', userName)
 
       const res = await fetch('/api/upload', {
         method: 'POST',
@@ -243,6 +245,7 @@ export default function FormFiller() {
         formData.append('file', file)
         if (userBidang) formData.append('bidang', userBidang)
         if (userId) formData.append('userId', userId)
+        if (userName) formData.append('userName', userName)
 
         const res = await fetch('/api/upload', {
           method: 'POST',

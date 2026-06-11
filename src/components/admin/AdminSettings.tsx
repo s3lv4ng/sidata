@@ -197,6 +197,9 @@ export default function AdminSettings() {
   const [testingDrive, setTestingDrive] = useState(false)
   const [testingDriveUpload, setTestingDriveUpload] = useState(false)
   const [bidangFolders, setBidangFolders] = useState<Array<{ id: string; name: string; webViewLink?: string }>>([])
+  const [asnFolders, setAsnFolders] = useState<Record<string, Array<{ id: string; name: string; webViewLink?: string }>>>({})
+  const [expandedBidangFolder, setExpandedBidangFolder] = useState<string | null>(null)
+  const [loadingAsnFolders, setLoadingAsnFolders] = useState<string | null>(null)
   const [driveFilesDialogOpen, setDriveFilesDialogOpen] = useState(false)
   const [showDriveCredentials, setShowDriveCredentials] = useState(false)
   const [showGoogleClientSecret, setShowGoogleClientSecret] = useState(false)
@@ -1584,7 +1587,7 @@ export default function AdminSettings() {
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                       <FolderOpen className="w-3.5 h-3.5" />
-                      Folder Bidang di Google Drive
+                      Folder Bidang & ASN di Google Drive
                     </p>
                     <Button
                       variant="outline"
@@ -1596,6 +1599,8 @@ export default function AdminSettings() {
                           const data = await res.json()
                           if (data.folders) {
                             setBidangFolders(data.folders)
+                            setAsnFolders({})
+                            setExpandedBidangFolder(null)
                             if (data.folders.length === 0) {
                               addNotification('Belum ada folder bidang di Drive', 'info')
                             } else {
@@ -1614,18 +1619,80 @@ export default function AdminSettings() {
                   {bidangFolders.length > 0 ? (
                     <div className="space-y-1">
                       {bidangFolders.map((folder) => (
-                        <div key={folder.id} className="flex items-center gap-2 rounded-md border p-2 text-xs">
-                          <FolderOpen className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                          <span className="font-medium flex-1">{folder.name}</span>
-                          {folder.webViewLink && (
-                            <a
-                              href={folder.webViewLink}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-primary hover:underline flex items-center gap-0.5 shrink-0"
+                        <div key={folder.id} className="rounded-md border overflow-hidden">
+                          <div className="flex items-center gap-2 p-2 text-xs">
+                            <button
+                              type="button"
+                              className="p-0.5 hover:bg-accent rounded transition-colors"
+                              onClick={async () => {
+                                if (expandedBidangFolder === folder.id) {
+                                  setExpandedBidangFolder(null)
+                                } else {
+                                  setExpandedBidangFolder(folder.id)
+                                  if (!asnFolders[folder.id]) {
+                                    setLoadingAsnFolders(folder.id)
+                                    try {
+                                      const res = await fetch(`/api/drive?action=list-asn-folders&bidangFolderId=${folder.id}`)
+                                      const data = await res.json()
+                                      if (data.folders) {
+                                        setAsnFolders(prev => ({ ...prev, [folder.id]: data.folders }))
+                                      }
+                                    } catch {
+                                      addNotification('Gagal memuat folder ASN', 'error')
+                                    } finally {
+                                      setLoadingAsnFolders(null)
+                                    }
+                                  }
+                                }
+                              }}
                             >
-                              Buka <ExternalLink className="w-2.5 h-2.5" />
-                            </a>
+                              <FolderOpen className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                            </button>
+                            <span className="font-medium flex-1">{folder.name}</span>
+                            {folder.webViewLink && (
+                              <a
+                                href={folder.webViewLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-primary hover:underline flex items-center gap-0.5 shrink-0"
+                              >
+                                Buka <ExternalLink className="w-2.5 h-2.5" />
+                              </a>
+                            )}
+                          </div>
+                          {/* ASN Subfolders */}
+                          {expandedBidangFolder === folder.id && (
+                            <div className="border-t bg-muted/30 px-3 py-1.5">
+                              {loadingAsnFolders === folder.id ? (
+                                <p className="text-[10px] text-muted-foreground flex items-center gap-1 py-1">
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                  Memuat folder ASN...
+                                </p>
+                              ) : asnFolders[folder.id] && asnFolders[folder.id].length > 0 ? (
+                                <div className="space-y-0.5">
+                                  {asnFolders[folder.id].map((asnFolder) => (
+                                    <div key={asnFolder.id} className="flex items-center gap-2 text-[11px] py-0.5">
+                                      <User className="w-3 h-3 text-blue-500 shrink-0" />
+                                      <span className="text-muted-foreground flex-1">{asnFolder.name}</span>
+                                      {asnFolder.webViewLink && (
+                                        <a
+                                          href={asnFolder.webViewLink}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-primary hover:underline flex items-center gap-0.5 shrink-0"
+                                        >
+                                          Buka <ExternalLink className="w-2 h-2" />
+                                        </a>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-[10px] text-muted-foreground/70 pl-1 py-0.5">
+                                  Belum ada folder ASN. Folder akan dibuat otomatis saat ASN mengunggah file.
+                                </p>
+                              )}
+                            </div>
                           )}
                         </div>
                       ))}
@@ -1636,7 +1703,7 @@ export default function AdminSettings() {
                     </p>
                   )}
                   <p className="text-[10px] text-muted-foreground/60 pl-1">
-                    Setiap bidang (Aset, Keuangan, dll.) akan memiliki folder terpisah di Google Drive. Folder dibuat otomatis saat upload pertama kali.
+                    Struktur: Root → Folder Bidang → Folder Nama ASN → File. Folder dibuat otomatis saat upload pertama kali.
                   </p>
                 </div>
               )}

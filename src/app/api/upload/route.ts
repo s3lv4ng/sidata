@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File | null
     const bidang = formData.get('bidang') as string | null
     const userId = formData.get('userId') as string | null
+    const userNameParam = formData.get('userName') as string | null
 
     if (!file) {
       return NextResponse.json({ error: 'File tidak ditemukan' }, { status: 400 })
@@ -74,6 +75,17 @@ export async function POST(request: NextRequest) {
     let driveLink: string | null = null
     let driveUploaded = false
 
+    // Look up the user's name for ASN folder creation
+    let userName: string | undefined = userNameParam || undefined
+    if (!userName && userId) {
+      try {
+        const user = await db.user.findUnique({ where: { id: userId }, select: { name: true } })
+        userName = user?.name || undefined
+      } catch {
+        // Skip user lookup if userId is invalid
+      }
+    }
+
     try {
       const driveConfigured = await isDriveConfigured()
       const oauthConfigured = await isOAuthDriveConfigured()
@@ -81,7 +93,7 @@ export async function POST(request: NextRequest) {
 
       if (anyDriveAvailable) {
         if (bidang) {
-          const driveResult = await uploadToBidangFolder(buffer, uniqueFilename, file.type, bidang)
+          const driveResult = await uploadToBidangFolder(buffer, uniqueFilename, file.type, bidang, userName)
           if (driveResult) {
             driveFileId = driveResult.fileId
             driveLink = driveResult.webViewLink
@@ -116,7 +128,7 @@ export async function POST(request: NextRequest) {
           data: {
             userId,
             action: 'FILE_UPLOAD',
-            details: `Mengunggah file "${file.name}"${bidang ? ` (Bidang: ${bidang})` : ''}${driveUploaded ? ' + Google Drive' : ''}`,
+            details: `Mengunggah file "${file.name}"${bidang ? ` (Bidang: ${bidang})` : ''}${userName ? ` (ASN: ${userName})` : ''}${driveUploaded ? ' + Google Drive' : ''}`,
           },
         })
       } catch {

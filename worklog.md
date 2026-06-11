@@ -1070,3 +1070,44 @@ Stage Summary:
 - Admin needs to: (1) Add redirect URI to Google Cloud Console, (2) Click "Hubungkan Akun Google Drive", (3) Authorize with bkad.seruyankab@gmail.com
 - After OAuth2 connection, all ASN file uploads will go to My Drive using the user's storage quota
 - Verified with agent-browser: OAuth2 section visible, "Hubungkan Akun Google Drive" button present
+
+---
+Task ID: 12
+Agent: main
+Task: Add ASN name subfolder creation within Bidang folder in Google Drive
+
+Work Log:
+- Added `findOrCreateAsnFolder(bidangFolderId, asnName)` function in google-drive.ts
+  - Searches for existing folder with ASN name inside the bidang folder
+  - If found, reuses the existing folder (cached with 30-min TTL)
+  - If not found, creates a new folder and makes it publicly viewable
+  - Sanitizes ASN name for Drive folder names
+- Updated `uploadToBidangFolder()` to accept optional `asnName` parameter
+  - New folder structure: Root → Bidang Folder → ASN Name Folder → File
+  - If ASN name provided, creates/finds ASN subfolder within bidang folder
+  - Falls back to bidang folder if ASN subfolder creation fails
+- Added `listAsnFolders(bidangFolderId)` function for admin UI
+- Updated `/api/upload/route.ts`:
+  - Accepts `userName` parameter from FormData
+  - Falls back to DB lookup via userId if userName not provided
+  - Passes userName to uploadToBidangFolder for ASN subfolder creation
+  - Updated activity log to include ASN name
+- Updated `/api/drive/route.ts`:
+  - Added `GET ?action=list-asn-folders&bidangFolderId=xxx` endpoint
+- Updated FormFiller.tsx:
+  - Added `userName` from session
+  - Passes `userName` in FormData for both single and multi-file uploads
+- Updated AdminSettings.tsx:
+  - Changed "Folder Bidang" section to "Folder Bidang & ASN"
+  - Added expandable ASN subfolder display within each bidang folder
+  - Click bidang folder to expand/collapse ASN subfolders
+  - Shows loading state while fetching ASN folders
+  - Shows "Belum ada folder ASN" when empty
+  - Updated structure description: "Root → Folder Bidang → Folder Nama ASN → File"
+
+Stage Summary:
+- Google Drive folder structure now: Root → Bidang → ASN Name → Files
+- If ASN name folder exists, it's reused (not duplicated)
+- Admin UI shows expandable bidang folders with ASN subfolders
+- All lint passes (only pre-existing custom-server.js warnings)
+- Verified with agent-browser: settings page loads correctly, Google Drive tab shows Folder Bidang & ASN section
