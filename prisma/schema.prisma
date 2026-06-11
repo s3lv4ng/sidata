@@ -3,108 +3,104 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
-  id          String   @id @default(cuid())
-  nip         String   @unique
-  password    String
-  name        String
-  role        String   @default("ASN") // "ADMIN" or "ASN"
-  email       String?
-  phone       String?
-  jabatan     String?   // Position
-  pangkat     String?   // Rank/Grade
-  unitKerja   String?   // Work unit
-  bidang      String?   // Division
-  statusASN   String?   // ASN status (PNS, PPPK, etc.)
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  forms          Form[]
-  responses      FormResponse[]
-  announcements  Announcement[]
-  activityLogs   ActivityLog[]
+  id                 String         @id @default(cuid())
+  nip                String         @unique
+  password           String
+  name               String
+  role               String         @default("ASN")
+  email              String?
+  phone              String?
+  jabatan            String?
+  pangkat            String?
+  unitKerja          String?
+  bidang             String?
+  statusASN          String?
+  isActive           Boolean        @default(true)
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  googleId           String?        @unique
+  googleRefreshToken String?
+  avatar             String?
+  activityLogs       ActivityLog[]
+  announcements      Announcement[]
+  forms              Form[]
+  responses          FormResponse[]
 }
 
 model Form {
-  id          String    @id @default(cuid())
+  id          String         @id @default(cuid())
   title       String
   description String?
-  isActive    Boolean   @default(true)
-  isClosed    Boolean   @default(false)
+  isActive    Boolean        @default(true)
+  isClosed    Boolean        @default(false)
   deadline    DateTime?
   createdById String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  createdBy User          @relation(fields: [createdById], references: [id])
-  fields    FormField[]
-  responses FormResponse[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  createdBy   User           @relation(fields: [createdById], references: [id])
+  fields      FormField[]
+  responses   FormResponse[]
 }
 
 model FormField {
-  id          String   @id @default(cuid())
+  id          String          @id @default(cuid())
   formId      String
   label       String
-  type        String   // short_text, paragraph, number, date, multiple_choice, checkbox, file_upload, multi_upload, dropdown, email, phone, url, time, rating, scale, image_upload, signature
-  required    Boolean  @default(false)
-  options     String?  // JSON string for choices (multiple_choice, checkbox, dropdown)
-  placeholder String?  // Placeholder text for the field
-  order       Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  form      Form            @relation(fields: [formId], references: [id], onDelete: Cascade)
-  responses FieldResponse[]
+  type        String
+  required    Boolean         @default(false)
+  options     String?
+  placeholder String?
+  order       Int             @default(0)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  responses   FieldResponse[]
+  form        Form            @relation(fields: [formId], references: [id], onDelete: Cascade)
 }
 
 model FormResponse {
-  id          String   @id @default(cuid())
+  id          String          @id @default(cuid())
   formId      String
   userId      String
-  isSubmitted Boolean  @default(true)
-  submittedAt DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  isSubmitted Boolean         @default(true)
+  submittedAt DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  fields      FieldResponse[]
+  form        Form            @relation(fields: [formId], references: [id])
+  user        User            @relation(fields: [userId], references: [id])
 
-  form   Form            @relation(fields: [formId], references: [id])
-  user   User            @relation(fields: [userId], references: [id])
-  fields FieldResponse[]
-
-  @@unique([formId, userId]) // One response per user per form
+  @@unique([formId, userId])
 }
 
 model FieldResponse {
-  id          String   @id @default(cuid())
+  id          String       @id @default(cuid())
   responseId  String
   fieldId     String
-  value       String?  // The answer value
-  fileName    String?  // For file uploads - original filename
-  filePath    String?  // For file uploads - stored path
-  driveFileId String?  // Google Drive file ID
-  driveLink   String?  // Google Drive web link
-  createdAt   DateTime @default(now())
-
-  response FormResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
-  field    FormField    @relation(fields: [fieldId], references: [id])
+  value       String?
+  fileName    String?
+  filePath    String?
+  driveFileId String?
+  driveLink   String?
+  createdAt   DateTime     @default(now())
+  field       FormField    @relation(fields: [fieldId], references: [id])
+  response    FormResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
 }
 
 model Announcement {
-  id        String   @id @default(cuid())
-  title     String
-  content   String
-  isPinned  Boolean  @default(false)
-  isActive  Boolean  @default(true)
-  isHidden  Boolean  @default(false)  // Hide from ASN homepage
+  id          String   @id @default(cuid())
+  title       String
+  content     String
+  isPinned    Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  isHidden    Boolean  @default(false)
   createdById String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  createdBy User @relation(fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   User     @relation(fields: [createdById], references: [id])
 }
 
 model ActivityLog {
@@ -114,8 +110,7 @@ model ActivityLog {
   details   String?
   ipAddress String?
   createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 }
 
 model SystemSetting {
@@ -127,8 +122,8 @@ model SystemSetting {
 model Bidang {
   id              String   @id @default(cuid())
   name            String   @unique
-  driveFolderId   String?  // Google Drive folder ID for this bidang
-  driveFolderLink String?  // Google Drive folder link for this bidang
+  driveFolderId   String?
+  driveFolderLink String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
