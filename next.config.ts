@@ -7,6 +7,7 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   reactStrictMode: false,
+   allowedDevOrigins: ['dentate-pablo-counterattractively.ngrok-free.dev']
 };
 
 export default nextConfig;
