@@ -214,11 +214,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       >
         {/* Sidebar header */}
         <div className="flex items-center gap-3 px-4 h-16 shrink-0 border-b border-white/10">
-          <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
+          <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center shrink-0">
             <img
               src={logo}
               alt="Logo BKAD"
-              className="w-7 h-7 object-contain brightness-0 invert"
+              className="w-7 h-7 object-contain"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement
+                target.onerror = null
+                target.src = '/logo.svg'
+              }}
             />
           </div>
           <div

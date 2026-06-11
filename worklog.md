@@ -1111,3 +1111,36 @@ Stage Summary:
 - Admin UI shows expandable bidang folders with ASN subfolders
 - All lint passes (only pre-existing custom-server.js warnings)
 - Verified with agent-browser: settings page loads correctly, Google Drive tab shows Folder Bidang & ASN section
+
+---
+Task ID: 13
+Agent: main
+Task: Fix broken logo display after upload - logo appears as placeholder/broken image
+
+Work Log:
+- Investigated the logo display issue using VLM on the user's screenshot
+- Found the logo was showing as a placeholder image with alt text "Logo BKAD Kabupaten" 
+- Root cause #1: Admin sidebar used `brightness-0 invert` CSS filter that turned colorful government emblem into an unrecognizable white blob
+- Root cause #2: No fallback mechanism when logo image fails to load
+- Fixed AdminLayout.tsx:
+  - Removed `brightness-0 invert` CSS class from sidebar logo
+  - Changed container from `bg-white/10` to `bg-white` with proper border
+  - Added `onError` fallback to `/logo.svg`
+- Fixed ASNHomepage.tsx:
+  - Changed container from `bg-primary/10` to `bg-white rounded-lg` with shadow and border
+  - Added `onError` fallback to `/logo.svg`
+- Fixed LoginForm.tsx:
+  - Added `onError` fallback to `/logo.svg`
+- Fixed SetupWizard.tsx:
+  - Added `onError` fallback to `/logo.svg` on both logo instances
+- Fixed AdminSettings.tsx:
+  - Removed `brightness-0 invert` from preview card logo
+  - Changed preview container from `bg-white/10` to `bg-white` with border
+  - Added `onError` fallback to `/logo.svg` on both logo preview and preview card
+
+Stage Summary:
+- All logo displays now use proper white background containers instead of CSS filters
+- All logo images have `onError` fallback to `/logo.svg` for graceful degradation
+- Logo displays correctly on: Login page, Admin sidebar, ASN homepage, Settings preview, Setup Wizard
+- Verified with agent-browser: all logos display correctly, no broken images
+- All lint passes (only pre-existing custom-server.js warnings)

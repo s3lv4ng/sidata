@@ -482,11 +482,16 @@ export default function ASNHomepage() {
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border shadow-sm">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="bg-primary/10 rounded-lg p-1.5">
+            <div className="bg-white rounded-lg p-1.5 shadow-sm border border-border/50">
               <img
                 src={logo}
                 alt="Logo BKAD"
                 className="w-8 h-8 sm:w-10 sm:h-10 object-contain"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement
+                  target.onerror = null
+                  target.src = '/logo.svg'
+                }}
               />
             </div>
             <div className="hidden sm:block">

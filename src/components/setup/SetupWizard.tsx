@@ -424,7 +424,7 @@ export default function SetupWizard() {
           transition={{ duration: 0.5 }}
           className="mx-auto w-24 h-24 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center border border-primary/10"
         >
-          <img src={logo} alt="Logo" className="w-16 h-16 object-contain" />
+          <img src={logo} alt="Logo" className="w-16 h-16 object-contain" onError={(e) => { const t = e.target as HTMLImageElement; t.onerror = null; t.src = '/logo.svg' }} />
         </motion.div>
         <motion.div
           initial={{ y: 10, opacity: 0 }}
@@ -1134,7 +1134,7 @@ export default function SetupWizard() {
         <div className="max-w-2xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <img src={logo} alt="Logo" className="w-8 h-8 object-contain" />
+              <img src={logo} alt="Logo" className="w-8 h-8 object-contain" onError={(e) => { const t = e.target as HTMLImageElement; t.onerror = null; t.src = '/logo.svg' }} />
               <div>
                 <h1 className="text-sm font-bold text-foreground">Setup Wizard</h1>
                 <p className="text-[11px] text-muted-foreground">Konfigurasi awal sistem</p>

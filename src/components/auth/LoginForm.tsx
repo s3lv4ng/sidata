@@ -191,6 +191,11 @@ export default function LoginForm() {
                         src={logo}
                         alt="Logo BKAD Kabupaten Seruyan"
                         className="w-16 h-16 sm:w-20 sm:h-20 object-contain"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement
+                          target.onerror = null
+                          target.src = '/logo.svg'
+                        }}
                       />
                     </div>
                   </div>

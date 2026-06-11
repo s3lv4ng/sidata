@@ -557,6 +557,11 @@ export default function AdminSettings() {
                           src={settings.appLogo}
                           alt="Logo Preview"
                           className="w-full h-full object-contain p-1"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement
+                            target.onerror = null
+                            target.src = '/logo.svg'
+                          }}
                         />
                       ) : (
                         <ImageIcon className="w-8 h-8 text-muted-foreground/30" />
@@ -2208,11 +2213,16 @@ export default function AdminSettings() {
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center border border-border/50">
                   <img
                     src={settings.appLogo || '/logo.svg'}
                     alt="Logo BKAD"
-                    className="w-8 h-8 object-contain brightness-0 invert"
+                    className="w-8 h-8 object-contain"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement
+                      target.onerror = null
+                      target.src = '/logo.svg'
+                    }}
                   />
                 </div>
                 <div>
