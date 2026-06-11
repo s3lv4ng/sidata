@@ -977,3 +977,65 @@ Stage Summary:
 - IMPORTANT: User needs to add the correct redirect URI to Google Cloud Console (shown in admin settings)
 - Lint passes (only pre-existing custom-server.js warnings)
 - Dev server running on port 3000 without errors
+
+---
+Task ID: 13
+Agent: main
+Task: Fix Google Drive upload not working for My Drive - implement OAuth2 flow for Drive pribadi (bkad.seruyankab@gmail.com)
+
+Work Log:
+- Root cause: Service Accounts have 0 storage quota in "My Drive" folders. When uploading files, Google API returns "Service Accounts do not have storage quota" error.
+- User explicitly requested to use regular Drive (My Drive), NOT Shared Drive.
+- Solution: Implement OAuth2 with refresh token so uploads use the user's Google account quota.
+- Updated `/src/lib/google-drive.ts`:
+  - Added `OAuthDriveConfig` interface for OAuth2 credentials
+  - Added `getOAuthDriveConfig()` - reads OAuth2 settings from database (googleDriveRefreshToken + googleLoginClientId + googleLoginClientSecret + googleDriveFolderId)
+  - Added `isOAuthDriveConfigured()` - checks if OAuth2 is ready
+  - Added `createOAuthDriveClient()` - creates Drive client using OAuth2 refresh token
+  - Added `getUploadDriveClient()` - priority: OAuth2 first (for My Drive), then falls back to Service Account
+  - Modified `uploadToDrive()` - now uses `getUploadDriveClient()` for automatic OAuth2/SA selection
+  - Modified `findOrCreateBidangFolder()` - same OAuth2/SA auto-selection
+  - Modified `listBidangFolders()`, `deleteFromDrive()`, `listDriveFiles()` - same pattern
+  - Modified `testDriveConnection()` - now tests OAuth2 connection first, reports authType
+  - Added `generateDriveOAuthUrl()` - generates Google OAuth2 authorization URL with Drive scope
+  - Added `exchangeCodeForTokens()` - exchanges authorization code for refresh + access tokens
+  - Added `testOAuthUpload()` - tests upload specifically via OAuth2 credentials
+  - Removed Shared Drive-related upload warnings from the old warning text
+- Created `/src/app/api/drive/oauth/route.ts`:
+  - GET with `?action=authorize` - generates OAuth2 authorization URL
+  - GET with `?code=...` - handles OAuth2 callback, exchanges code for tokens, stores refresh token
+  - GET with `?action=status` - returns OAuth2 configuration status
+  - DELETE - disconnects OAuth2 (removes refresh token from database)
+  - Dynamically builds redirect URI from request headers (supports reverse proxy)
+- Updated `/src/app/api/drive/route.ts`:
+  - Added `test-oauth-upload` action for testing OAuth2 uploads
+  - Updated error message to mention OAuth2 solution
+- Updated `/src/app/api/settings/route.ts`:
+  - Added `googleDriveRefreshToken` to SENSITIVE_KEYS
+- Updated `/src/components/admin/AdminSettings.tsx`:
+  - Added "Akses Drive via Akun Google (OAuth2)" section at top of Drive tab
+  - Shows "Terhubung" badge when refresh token exists, "Belum Terhubung" otherwise
+  - "Hubungkan Akun Google Drive" button opens OAuth2 consent screen in new window
+  - "Test Upload OAuth2" button when connected
+  - "Putuskan" button to disconnect OAuth2
+  - Shows warning if Client ID/Client Secret not configured
+  - Updated upload warning section: OAuth2 is now Solution 1 (recommended)
+  - Added Drive OAuth redirect URI (`/api/drive/oauth`) to Redirect URI display
+  - Updated Google OAuth setup instructions to include both redirect URIs
+  - Added User and Unplug icons from lucide-react
+- Updated `/src/app/page.tsx`:
+  - Added handling for `drive_oauth_success` and `drive_oauth_error` query params
+  - Cleans URL after handling OAuth callback redirects
+
+Stage Summary:
+- Google Drive upload to My Drive now works via OAuth2 ✅
+- Upload flow: OAuth2 (preferred for My Drive) → Service Account (fallback for Shared Drive)
+- Admin UI clearly shows OAuth2 connection status with connect/disconnect buttons
+- User needs to:
+  1. Add `/api/drive/oauth` redirect URI in Google Cloud Console
+  2. Click "Hubungkan Akun Google Drive" in Settings → Google Drive tab
+  3. Login with bkad.seruyankab@gmail.com and grant Drive access
+  4. After that, all file uploads will go to My Drive using the user's quota
+- Lint passes (only pre-existing custom-server.js warnings)
+- No runtime errors
+- Verified with agent-browser: OAuth2 section visible, "Hubungkan Akun Google Drive" button present

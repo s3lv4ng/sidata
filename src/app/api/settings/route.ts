@@ -6,6 +6,7 @@ import { invalidateSettingsCache } from "@/lib/auth";
 const SENSITIVE_KEYS = [
   "googleDrivePrivateKey",
   "googleLoginClientSecret",
+  "googleDriveRefreshToken",
 ];
 
 // GET /api/settings

@@ -69,9 +69,16 @@ export async function POST(request: NextRequest) {
       } else {
         return NextResponse.json({
           success: false,
-          message: 'Upload ke Google Drive gagal. Folder mungkin berada di "My Drive" - gunakan Shared Drive atau atur Email Delegasi.',
+          message: 'Upload ke Google Drive gagal. Folder mungkin berada di "My Drive" - gunakan OAuth2 atau atur Email Delegasi.',
         }, { status: 400 })
       }
+    }
+
+    if (action === 'test-oauth-upload') {
+      // Test upload using OAuth2 credentials specifically
+      const { testOAuthUpload } = await import('@/lib/google-drive')
+      const result = await testOAuthUpload()
+      return NextResponse.json(result, { status: result.success ? 200 : 400 })
     }
 
     if (action === 'create-bidang-folder') {

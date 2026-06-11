@@ -10,6 +10,14 @@ interface DriveConfig {
   delegateEmail?: string // For domain-wide delegation
 }
 
+// OAuth2 configuration for user-owned Drive uploads
+interface OAuthDriveConfig {
+  clientId: string
+  clientSecret: string
+  refreshToken: string
+  folderId: string
+}
+
 // Error type for detailed Google API errors
 export interface DriveError {
   message: string
@@ -118,7 +126,57 @@ export async function isDriveConfigured(): Promise<boolean> {
   return config !== null
 }
 
-// Create an authenticated Google Drive client
+// Get OAuth2 Drive configuration from database settings
+export async function getOAuthDriveConfig(): Promise<OAuthDriveConfig | null> {
+  try {
+    const settings = await db.systemSetting.findMany({
+      where: {
+        key: {
+          in: ['googleDriveRefreshToken', 'googleDriveFolderId', 'googleLoginClientId', 'googleLoginClientSecret'],
+        },
+      },
+    })
+
+    const settingsMap: Record<string, string> = {}
+    settings.forEach((s) => (settingsMap[s.key] = s.value))
+
+    const clientId = settingsMap.googleLoginClientId
+    const clientSecret = settingsMap.googleLoginClientSecret
+    const refreshToken = settingsMap.googleDriveRefreshToken
+    const folderId = settingsMap.googleDriveFolderId
+
+    if (!clientId || !clientSecret || !refreshToken || !folderId) {
+      return null
+    }
+
+    return { clientId, clientSecret, refreshToken, folderId }
+  } catch (error) {
+    console.error('Error getting OAuth Drive config:', error)
+    return null
+  }
+}
+
+// Check if OAuth2 Drive is configured (for My Drive uploads)
+export async function isOAuthDriveConfigured(): Promise<boolean> {
+  const config = await getOAuthDriveConfig()
+  return config !== null
+}
+
+// Create an authenticated Google Drive client using OAuth2 (for user's My Drive)
+function createOAuthDriveClient(config: OAuthDriveConfig) {
+  const oauth2Client = new google.auth.OAuth2(
+    config.clientId,
+    config.clientSecret,
+  )
+
+  oauth2Client.setCredentials({
+    refresh_token: config.refreshToken,
+  })
+
+  return google.drive({ version: 'v3', auth: oauth2Client })
+}
+
+// Create an authenticated Google Drive client using Service Account
 // If delegateEmail is set, uses domain-wide delegation to impersonate a real user
 function createDriveClient(config: DriveConfig) {
   const authConfig: any = {
@@ -138,7 +196,36 @@ function createDriveClient(config: DriveConfig) {
   return google.drive({ version: 'v3', auth })
 }
 
-// Upload a file to Google Drive (supports Shared Drives and domain-wide delegation)
+// Get the best available Drive client for uploads
+// Prefers OAuth2 (user's Drive) over Service Account
+async function getUploadDriveClient(): Promise<{ drive: any; folderId: string; authType: 'oauth2' | 'service_account' } | null> {
+  // Try OAuth2 first (for My Drive - user has storage quota)
+  const oauthConfig = await getOAuthDriveConfig()
+  if (oauthConfig) {
+    try {
+      const drive = createOAuthDriveClient(oauthConfig)
+      return { drive, folderId: oauthConfig.folderId, authType: 'oauth2' }
+    } catch (error) {
+      console.warn('OAuth2 Drive client failed, falling back to Service Account:', error)
+    }
+  }
+
+  // Fall back to Service Account
+  const config = await getDriveConfig()
+  if (config) {
+    try {
+      const drive = createDriveClient(config)
+      return { drive, folderId: config.folderId, authType: 'service_account' }
+    } catch (error) {
+      console.error('Service Account Drive client failed:', error)
+    }
+  }
+
+  return null
+}
+
+// Upload a file to Google Drive
+// Uses OAuth2 if available (for My Drive), otherwise falls back to Service Account
 export async function uploadToDrive(
   fileBuffer: Buffer,
   fileName: string,
@@ -146,14 +233,14 @@ export async function uploadToDrive(
   folderId?: string
 ): Promise<{ fileId: string; webViewLink: string } | null> {
   try {
-    const config = await getDriveConfig()
-    if (!config) {
-      console.log('Google Drive not configured, skipping upload')
+    const clientInfo = await getUploadDriveClient()
+    if (!clientInfo) {
+      console.log('No Drive client available for upload')
       return null
     }
 
-    const drive = createDriveClient(config)
-    const targetFolderId = folderId || config.folderId
+    const { drive, folderId: defaultFolderId, authType } = clientInfo
+    const targetFolderId = folderId || defaultFolderId
 
     // Create a unique filename with timestamp
     const timestamp = Date.now()
@@ -163,6 +250,8 @@ export async function uploadToDrive(
 
     // Convert Buffer to Readable stream
     const readableStream = Readable.from(fileBuffer)
+
+    const isSharedDrive = authType === 'service_account'
 
     const response = await drive.files.create({
       requestBody: {
@@ -174,7 +263,7 @@ export async function uploadToDrive(
         body: readableStream,
       },
       fields: 'id, webViewLink',
-      supportsAllDrives: true,
+      supportsAllDrives: isSharedDrive,
     })
 
     if (!response.data.id || !response.data.webViewLink) {
@@ -190,11 +279,13 @@ export async function uploadToDrive(
           role: 'reader',
           type: 'anyone',
         },
-        supportsAllDrives: true,
+        supportsAllDrives: isSharedDrive,
       })
     } catch (permError: any) {
       console.warn('Could not set public permission on Drive file:', permError?.message)
     }
+
+    console.log(`File uploaded to Google Drive via ${authType}: ${uniqueFileName} (ID: ${response.data.id})`)
 
     return {
       fileId: response.data.id,
@@ -214,11 +305,14 @@ const BIDANG_CACHE_TTL = 30 * 60 * 1000 // 30 minutes
 // Each bidang gets its own folder (e.g., "Aset", "Keuangan", etc.)
 export async function findOrCreateBidangFolder(bidangName: string): Promise<string | null> {
   try {
-    const config = await getDriveConfig()
-    if (!config) {
-      console.log('Google Drive not configured, cannot create bidang folder')
+    const clientInfo = await getUploadDriveClient()
+    if (!clientInfo) {
+      console.log('No Drive client available for bidang folder creation')
       return null
     }
+
+    const { drive, folderId: parentFolderId, authType } = clientInfo
+    const isSharedDrive = authType === 'service_account'
 
     // Check cache first
     const cached = bidangFolderCache[bidangName]
@@ -226,19 +320,17 @@ export async function findOrCreateBidangFolder(bidangName: string): Promise<stri
       return cached.folderId
     }
 
-    const drive = createDriveClient(config)
-
     // Sanitize bidang name for folder name
     const sanitizedBidang = bidangName.trim().replace(/[<>:"/\\|?*]/g, '_')
     if (!sanitizedBidang) return null
 
     // Search for existing folder with this bidang name in the parent folder
     const searchResponse = await drive.files.list({
-      q: `'${config.folderId}' in parents and name = '${sanitizedBidang}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+      q: `'${parentFolderId}' in parents and name = '${sanitizedBidang}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
       fields: 'files(id, name)',
-      includeItemsFromAllDrives: true,
-      supportsAllDrives: true,
-      corpora: 'allDrives',
+      includeItemsFromAllDrives: isSharedDrive,
+      supportsAllDrives: isSharedDrive,
+      corpora: isSharedDrive ? 'allDrives' : 'user',
       pageSize: 1,
     })
 
@@ -256,10 +348,10 @@ export async function findOrCreateBidangFolder(bidangName: string): Promise<stri
       requestBody: {
         name: sanitizedBidang,
         mimeType: 'application/vnd.google-apps.folder',
-        parents: [config.folderId],
+        parents: [parentFolderId],
       },
       fields: 'id, name, webViewLink',
-      supportsAllDrives: true,
+      supportsAllDrives: isSharedDrive,
     })
 
     const newFolderId = createResponse.data.id
@@ -278,7 +370,7 @@ export async function findOrCreateBidangFolder(bidangName: string): Promise<stri
           role: 'reader',
           type: 'anyone',
         },
-        supportsAllDrives: true,
+        supportsAllDrives: isSharedDrive,
       })
     } catch (permError: any) {
       console.warn('Could not set public permission on bidang folder:', permError?.message)
@@ -329,16 +421,18 @@ export async function uploadToBidangFolder(
 // List all bidang subfolders in the parent Drive folder
 export async function listBidangFolders(): Promise<Array<{ id: string; name: string; webViewLink?: string }>> {
   try {
-    const config = await getDriveConfig()
-    if (!config) return []
+    const clientInfo = await getUploadDriveClient()
+    if (!clientInfo) return []
 
-    const drive = createDriveClient(config)
+    const { drive, folderId, authType } = clientInfo
+    const isSharedDrive = authType === 'service_account'
+
     const response = await drive.files.list({
-      q: `'${config.folderId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+      q: `'${folderId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
       fields: 'files(id, name, webViewLink)',
-      includeItemsFromAllDrives: true,
-      supportsAllDrives: true,
-      corpora: 'allDrives',
+      includeItemsFromAllDrives: isSharedDrive,
+      supportsAllDrives: isSharedDrive,
+      corpora: isSharedDrive ? 'allDrives' : 'user',
       pageSize: 100,
     })
 
@@ -356,11 +450,13 @@ export async function listBidangFolders(): Promise<Array<{ id: string; name: str
 // Delete a file from Google Drive
 export async function deleteFromDrive(fileId: string): Promise<boolean> {
   try {
-    const config = await getDriveConfig()
-    if (!config) return false
+    const clientInfo = await getUploadDriveClient()
+    if (!clientInfo) return false
 
-    const drive = createDriveClient(config)
-    await drive.files.delete({ fileId, supportsAllDrives: true })
+    const { drive, authType } = clientInfo
+    const isSharedDrive = authType === 'service_account'
+
+    await drive.files.delete({ fileId, supportsAllDrives: isSharedDrive })
     return true
   } catch (error: any) {
     console.error('Error deleting from Google Drive:', error?.message || error)
@@ -371,18 +467,20 @@ export async function deleteFromDrive(fileId: string): Promise<boolean> {
 // List files in the configured folder
 export async function listDriveFiles(maxResults: number = 10): Promise<any[] | null> {
   try {
-    const config = await getDriveConfig()
-    if (!config) return null
+    const clientInfo = await getUploadDriveClient()
+    if (!clientInfo) return null
 
-    const drive = createDriveClient(config)
+    const { drive, folderId, authType } = clientInfo
+    const isSharedDrive = authType === 'service_account'
+
     const response = await drive.files.list({
-      q: `'${config.folderId}' in parents and trashed = false`,
+      q: `'${folderId}' in parents and trashed = false`,
       pageSize: maxResults,
       fields: 'files(id, name, mimeType, webViewLink, createdTime, size)',
       orderBy: 'createdTime desc',
-      includeItemsFromAllDrives: true,
-      supportsAllDrives: true,
-      corpora: 'allDrives',
+      includeItemsFromAllDrives: isSharedDrive,
+      supportsAllDrives: isSharedDrive,
+      corpora: isSharedDrive ? 'allDrives' : 'user',
     })
 
     return response.data.files || []
@@ -419,20 +517,56 @@ export async function testDriveConnection(): Promise<{
   files?: any[]
   canUpload?: boolean
   uploadWarning?: string
+  authType?: 'oauth2' | 'service_account' | 'none'
+  oauthConfigured?: boolean
   error?: DriveError
   message: string
 }> {
   try {
+    // Check if OAuth2 is configured (preferred for My Drive)
+    const oauthConfig = await getOAuthDriveConfig()
+    const oauthConfigured = !!oauthConfig
+
     const config = await getDriveConfig()
-    if (!config) {
+    if (!config && !oauthConfig) {
       return {
         configured: false,
         connected: false,
-        message: 'Google Drive belum dikonfigurasi. Silakan atur Service Account Email, Private Key, dan Folder ID.',
+        authType: 'none',
+        oauthConfigured: false,
+        message: 'Google Drive belum dikonfigurasi. Silakan atur Service Account Email, Private Key, dan Folder ID, atau hubungkan akun Google Drive Anda.',
       }
     }
 
     try {
+      // Try OAuth2 connection first
+      if (oauthConfig) {
+        try {
+          const drive = createOAuthDriveClient(oauthConfig)
+          const folderResponse = await drive.files.get({
+            fileId: oauthConfig.folderId,
+            fields: 'id, name',
+          })
+
+          const files = await listDriveFiles(10)
+
+          return {
+            configured: true,
+            connected: true,
+            folder: { name: folderResponse.data.name || '', id: folderResponse.data.id || '' },
+            files: files || [],
+            canUpload: true, // OAuth2 always has upload capability (user's quota)
+            authType: 'oauth2',
+            oauthConfigured: true,
+            message: 'Google Drive terhubung via Akun Google (OAuth2). Upload file akan menggunakan kuota penyimpanan akun Google Anda.',
+          }
+        } catch (oauthError: any) {
+          console.warn('OAuth2 Drive test failed:', oauthError?.message)
+          // Fall through to Service Account test
+        }
+      }
+
+      // Service Account connection test
       const folderInfo = await getFolderInfo()
       const files = await listDriveFiles(10)
 
@@ -440,10 +574,10 @@ export async function testDriveConnection(): Promise<{
       let canUpload = true
       let uploadWarning: string | undefined
 
-      if (!folderInfo.driveId && !config.delegateEmail) {
+      if (!folderInfo.driveId && !config!.delegateEmail) {
         // Folder is in My Drive and no delegation configured
         canUpload = false
-        uploadWarning = 'Folder ini berada di "My Drive" (Drive Pribadi), bukan Shared Drive. Upload file oleh Service Account akan gagal karena tidak memiliki kuota penyimpanan. Solusi: (1) Gunakan Shared Drive/Drive Bersama, atau (2) Atur Email Delegasi untuk domain-wide delegation.'
+        uploadWarning = 'Folder ini berada di "My Drive" (Drive Pribadi), bukan Shared Drive. Upload file oleh Service Account akan gagal karena tidak memiliki kuota penyimpanan. Solusi: Hubungkan akun Google Drive Anda di bagian "Akses Drive (OAuth2)" di atas.'
       }
 
       return {
@@ -453,13 +587,17 @@ export async function testDriveConnection(): Promise<{
         files: files || [],
         canUpload,
         uploadWarning,
-        message: 'Google Drive terhubung dengan sukses.',
+        authType: 'service_account',
+        oauthConfigured: false,
+        message: 'Google Drive terhubung via Service Account.',
       }
     } catch (error: any) {
       const driveError = parseDriveError(error)
       return {
         configured: true,
         connected: false,
+        authType: 'service_account',
+        oauthConfigured,
         error: driveError,
         message: driveError.message,
       }
@@ -468,13 +606,102 @@ export async function testDriveConnection(): Promise<{
     return {
       configured: false,
       connected: false,
+      authType: 'none',
+      oauthConfigured: false,
       error: parseDriveError(error),
       message: `Error: ${error.message || 'Koneksi gagal'}`,
     }
   }
 }
 
-// Create a Shared Drive and folder for file uploads
+// Generate OAuth2 authorization URL for Google Drive access
+export function generateDriveOAuthUrl(clientId: string, redirectUri: string): string {
+  const oauth2Client = new google.auth.OAuth2(
+    clientId,
+    '', // We don't need client secret for generating auth URL
+    redirectUri,
+  )
+
+  const url = oauth2Client.generateAuthUrl({
+    access_type: 'offline',
+    scope: [
+      'https://www.googleapis.com/auth/drive.file',
+      'https://www.googleapis.com/auth/drive.readonly',
+    ],
+    prompt: 'consent', // Force consent to get refresh token
+    include_granted_scopes: true,
+  })
+
+  return url
+}
+
+// Exchange OAuth2 authorization code for tokens (including refresh token)
+export async function exchangeCodeForTokens(
+  clientId: string,
+  clientSecret: string,
+  code: string,
+  redirectUri: string
+): Promise<{ refreshToken: string; accessToken: string }> {
+  const oauth2Client = new google.auth.OAuth2(
+    clientId,
+    clientSecret,
+    redirectUri,
+  )
+
+  const { tokens } = await oauth2Client.getToken(code)
+
+  if (!tokens.refresh_token) {
+    throw new Error('Tidak mendapatkan refresh token. Pastikan Anda menyetujui akses (consent) saat login. Coba lagi.')
+  }
+
+  return {
+    refreshToken: tokens.refresh_token,
+    accessToken: tokens.access_token || '',
+  }
+}
+
+// Test upload using OAuth2 credentials
+export async function testOAuthUpload(): Promise<{ success: boolean; message: string }> {
+  try {
+    const oauthConfig = await getOAuthDriveConfig()
+    if (!oauthConfig) {
+      return { success: false, message: 'OAuth2 Drive belum dikonfigurasi' }
+    }
+
+    const drive = createOAuthDriveClient(oauthConfig)
+
+    // Create a test file
+    const testContent = `SIDATA BKAD Test Upload via OAuth2 - ${new Date().toISOString()}`
+    const testBuffer = Buffer.from(testContent, 'utf-8')
+    const readableStream = Readable.from(testBuffer)
+
+    const response = await drive.files.create({
+      requestBody: {
+        name: `test_oauth_${Date.now()}.txt`,
+        parents: [oauthConfig.folderId],
+      },
+      media: {
+        mimeType: 'text/plain',
+        body: readableStream,
+      },
+      fields: 'id, webViewLink',
+    })
+
+    if (response.data.id) {
+      // Clean up the test file
+      try {
+        await drive.files.delete({ fileId: response.data.id })
+      } catch {}
+      return { success: true, message: 'Upload ke Google Drive berhasil via OAuth2! File test dihapus otomatis.' }
+    }
+
+    return { success: false, message: 'Upload gagal - tidak ada file ID yang dikembalikan' }
+  } catch (error: any) {
+    return { success: false, message: `Upload gagal: ${error?.message || 'Unknown error'}` }
+  }
+}
+
+// Create a Shared Drive and folder for file uploads (legacy - kept for compatibility)
 export async function createSharedDriveForUpload(): Promise<{
   success: boolean
   message: string

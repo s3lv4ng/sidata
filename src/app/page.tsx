@@ -28,6 +28,24 @@ function AppContent() {
   // Wait for initial setup check before rendering any view
   const [initDone, setInitDone] = useState(false)
 
+  // Handle OAuth callback query params (from Google Drive OAuth2 flow)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const driveOAuthSuccess = params.get('drive_oauth_success')
+    const driveOAuthError = params.get('drive_oauth_error')
+
+    if (driveOAuthSuccess) {
+      // Clean URL
+      window.history.replaceState({}, '', '/')
+      // The success will be reflected in the settings page automatically
+    }
+    if (driveOAuthError) {
+      console.error('Drive OAuth error:', driveOAuthError)
+      window.history.replaceState({}, '', '/')
+    }
+  }, [])
+
   useEffect(() => {
     if (status === 'loading') return
     if (initDone) return
