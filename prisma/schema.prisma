@@ -14,6 +14,7 @@ model User {
   name        String
   role        String   @default("ASN") // "ADMIN" or "ASN"
   email       String?
+  googleId    String?  @unique
   phone       String?
   jabatan     String?   // Position
   pangkat     String?   // Rank/Grade
